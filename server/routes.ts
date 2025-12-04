@@ -211,10 +211,12 @@ export async function registerRoutes(
           .from(leaderboardEntries)
           .where(eq(leaderboardEntries.season, season));
         
-        const found = dbResults.find(entry => 
-          entry.handle.toLowerCase().includes(searchTerm) ||
-          entry.username.toLowerCase().includes(searchTerm)
-        );
+        // Search by handle (without @) or username (display name)
+        const found = dbResults.find(entry => {
+          const handleWithoutAt = entry.handle.replace('@', '').toLowerCase();
+          return handleWithoutAt.includes(searchTerm) ||
+            entry.username.toLowerCase().includes(searchTerm);
+        });
         
         results.push({
           season,
@@ -246,11 +248,27 @@ export async function registerRoutes(
       const foundResult = results.find(r => r.found);
       const s5User = user30d || user7d || user24h;
       
+      // Get the actual Twitter handle for profile picture
+      let twitterHandle = searchTerm;
+      let displayName = searchTerm;
+      let handleDisplay = `@${searchTerm}`;
+      
+      if (s5User) {
+        twitterHandle = s5User.username;
+        displayName = s5User.displayName || s5User.username;
+        handleDisplay = `@${s5User.username}`;
+      } else if (foundResult?.handle) {
+        // Extract handle from S1-S4 result (remove @ prefix)
+        twitterHandle = foundResult.handle.replace('@', '');
+        displayName = foundResult.username || twitterHandle;
+        handleDisplay = foundResult.handle;
+      }
+      
       res.json({
-        searchedUsername: searchTerm,
-        displayName: s5User?.displayName || foundResult?.username || searchTerm,
-        handle: s5User ? `@${s5User.username}` : (foundResult?.handle || `@${searchTerm}`),
-        profilePic: s5User ? `https://unavatar.io/twitter/${s5User.username}` : `https://unavatar.io/twitter/${searchTerm}`,
+        searchedUsername: twitterHandle,
+        displayName,
+        handle: handleDisplay,
+        profilePic: `https://unavatar.io/twitter/${twitterHandle}`,
         results,
         s5: s5Result,
         timestamp: new Date().toISOString(),
