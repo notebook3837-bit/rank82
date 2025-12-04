@@ -1,12 +1,12 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { RankTable, RankData } from "@/components/rank-table";
 import { StatsCard } from "@/components/stats-card";
 import { TierSelector } from "@/components/tier-selector";
 import { TimeSelector } from "@/components/time-selector";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Flame, Trophy, Users, RefreshCw, Clock, ExternalLink } from "lucide-react";
+import { Search, Flame, Trophy, Users, RefreshCw, Clock, ExternalLink, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface LeaderboardResponse {
@@ -27,11 +27,68 @@ interface LeaderboardResponse {
   }[];
 }
 
+interface UserRankResult {
+  season: string;
+  timeframe: string;
+  rank: number | null;
+  mindshare: number | null;
+  username: string | null;
+  handle: string | null;
+  found: boolean;
+}
+
+interface SearchResponse {
+  searchedUsername: string;
+  displayName: string;
+  handle: string;
+  results: UserRankResult[];
+  timestamp: string;
+}
+
 export default function Leaderboard() {
   const [tier, setTier] = useState("s5");
   const [range, setRange] = useState("30d");
   const [search, setSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchResponse | null>(null);
   const { toast } = useToast();
+  
+  const searchMutation = useMutation({
+    mutationFn: async (username: string) => {
+      const response = await fetch(`/api/search/${encodeURIComponent(username)}`);
+      if (!response.ok) {
+        throw new Error('Failed to search for user');
+      }
+      return response.json() as Promise<SearchResponse>;
+    },
+    onSuccess: (data) => {
+      setSearchResults(data);
+      toast({
+        title: "Search Complete",
+        description: `Found ranks for ${data.handle}`,
+        duration: 2000,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Search Failed",
+        description: "Could not find user data. Please try again.",
+        variant: "destructive",
+        duration: 3000,
+      });
+    },
+  });
+
+  const handleSearch = () => {
+    if (search.trim().length >= 2) {
+      searchMutation.mutate(search.trim());
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && search.trim().length >= 2) {
+      handleSearch();
+    }
+  };
 
   const { data: apiData, isLoading, error, refetch } = useQuery<LeaderboardResponse>({
     queryKey: ['leaderboard', tier, range],
@@ -98,23 +155,115 @@ export default function Leaderboard() {
                   className="pl-14 pr-4 bg-yellow-50 border-2 border-black focus:ring-2 focus:ring-yellow-400 focus:border-black h-14 text-lg font-medium placeholder:text-black/40 rounded-lg"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
+                  onKeyDown={handleKeyPress}
                   data-testid="input-search"
                 />
               </div>
             </div>
             <Button 
+              onClick={handleSearch}
+              disabled={searchMutation.isPending || search.trim().length < 2}
+              className="h-14 px-8 border-2 border-black bg-yellow-400 text-black hover:bg-black hover:text-white transition-all text-lg font-bold rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)]"
+              data-testid="button-search"
+            >
+              {searchMutation.isPending ? (
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+              ) : (
+                <Search className="h-5 w-5 mr-2" />
+              )}
+              Find Rank
+            </Button>
+            <Button 
               onClick={handleRefresh}
               disabled={isLoading}
-              className="h-14 px-8 border-2 border-black bg-black text-white hover:bg-yellow-400 hover:text-black transition-all text-lg font-bold rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)]"
+              variant="outline"
+              className="h-14 px-6 border-2 border-black bg-white text-black hover:bg-black/5 transition-all text-lg font-bold rounded-lg"
               data-testid="button-refresh"
             >
-              <RefreshCw className={`h-5 w-5 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-              Refresh Data
+              <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
             </Button>
           </div>
-          {search && (
+          
+          {/* User Rank Summary */}
+          {searchResults && (
+            <div className="mt-6 pt-6 border-t-2 border-black/10">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-black text-white rounded-full flex items-center justify-center font-bold text-lg">
+                  {searchResults.displayName.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg text-black">{searchResults.displayName}</h3>
+                  <p className="text-sm text-black/60">{searchResults.handle}</p>
+                </div>
+              </div>
+              
+              {/* Rank Grid */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b-2 border-black">
+                      <th className="text-left py-2 px-3 font-bold text-black/70 uppercase tracking-wider text-xs">Season</th>
+                      <th className="text-center py-2 px-3 font-bold text-black/70 uppercase tracking-wider text-xs">24h</th>
+                      <th className="text-center py-2 px-3 font-bold text-black/70 uppercase tracking-wider text-xs">7 Days</th>
+                      <th className="text-center py-2 px-3 font-bold text-black/70 uppercase tracking-wider text-xs">30 Days</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {["s5", "s4", "s3", "s2", "s1"].map((season) => {
+                      const seasonResults = searchResults.results.filter(r => r.season === season);
+                      const r24h = seasonResults.find(r => r.timeframe === "24h");
+                      const r7d = seasonResults.find(r => r.timeframe === "7d");
+                      const r30d = seasonResults.find(r => r.timeframe === "30d");
+                      
+                      const isLive = season === "s5";
+                      
+                      return (
+                        <tr key={season} className="border-b border-black/10 hover:bg-yellow-50">
+                          <td className="py-3 px-3">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-black uppercase">{season}</span>
+                              {isLive && (
+                                <span className="px-1.5 py-0.5 bg-green-500 text-white text-[10px] font-bold rounded">LIVE</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="text-center py-3 px-3">
+                            {r24h?.found ? (
+                              <span className="font-bold text-black">#{r24h.rank}</span>
+                            ) : (
+                              <span className="text-black/30">—</span>
+                            )}
+                          </td>
+                          <td className="text-center py-3 px-3">
+                            {r7d?.found ? (
+                              <span className="font-bold text-black">#{r7d.rank}</span>
+                            ) : (
+                              <span className="text-black/30">—</span>
+                            )}
+                          </td>
+                          <td className="text-center py-3 px-3">
+                            {r30d?.found ? (
+                              <span className="font-bold text-black">#{r30d.rank}</span>
+                            ) : (
+                              <span className="text-black/30">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              
+              <p className="mt-3 text-xs text-black/50">
+                S5 shows live ranks. S1-S4 historical data not yet available.
+              </p>
+            </div>
+          )}
+          
+          {search && !searchResults && !searchMutation.isPending && (
             <div className="mt-3 text-sm font-medium text-black/70">
-              Showing results for "<span className="text-black font-bold">{search}</span>" - {filteredData.length} user{filteredData.length !== 1 ? 's' : ''} found
+              Showing results for "<span className="text-black font-bold">{search}</span>" - {filteredData.length} user{filteredData.length !== 1 ? 's' : ''} found in leaderboard
             </div>
           )}
         </div>

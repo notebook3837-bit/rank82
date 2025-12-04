@@ -18,6 +18,16 @@ interface ApiResponse {
   data: ApiEntry[];
 }
 
+interface UserRankResult {
+  season: string;
+  timeframe: string;
+  rank: number | null;
+  mindshare: number | null;
+  username: string | null;
+  handle: string | null;
+  found: boolean;
+}
+
 const API_BASE = "https://leaderboard-bice-mu.vercel.app/api/zama";
 
 async function fetchLiveLeaderboard(timeframe: string, maxPages: number = 15): Promise<ApiEntry[]> {
@@ -49,6 +59,45 @@ async function fetchLiveLeaderboard(timeframe: string, maxPages: number = 15): P
   }
   
   return allEntries;
+}
+
+async function searchUserInLeaderboard(username: string, timeframe: string): Promise<ApiEntry | null> {
+  const searchTerm = username.toLowerCase().replace('@', '');
+  let page = 1;
+  const maxPages = 50;
+  
+  while (page <= maxPages) {
+    try {
+      const url = `${API_BASE}?timeframe=${timeframe}&sortBy=mindshare&page=${page}`;
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': 'application/json',
+        }
+      });
+      
+      if (!response.ok) break;
+      
+      const json = await response.json() as ApiResponse;
+      
+      if (!json.success || !json.data || json.data.length === 0) break;
+      
+      const found = json.data.find(entry => 
+        entry.username.toLowerCase() === searchTerm ||
+        entry.displayName.toLowerCase().includes(searchTerm)
+      );
+      
+      if (found) return found;
+      
+      if (json.data.length < 100) break;
+      page++;
+    } catch (error) {
+      console.error(`Error searching page ${page}:`, error);
+      break;
+    }
+  }
+  
+  return null;
 }
 
 export async function registerRoutes(
@@ -110,6 +159,67 @@ export async function registerRoutes(
   // POST /api/refresh - Manually refresh data (for testing)
   app.post("/api/refresh", async (_req, res) => {
     res.json({ success: true, message: "Data is fetched live from API" });
+  });
+
+  // GET /api/search/:username - Search for a user across all seasons and time ranges
+  app.get("/api/search/:username", async (req, res) => {
+    try {
+      const { username } = req.params;
+      const searchTerm = username.replace('@', '');
+      
+      if (!searchTerm || searchTerm.length < 2) {
+        return res.status(400).json({ error: "Username must be at least 2 characters" });
+      }
+      
+      const timeframes = ["24h", "7d", "30d"];
+      const seasons = ["s5", "s4", "s3", "s2", "s1"];
+      
+      const results: UserRankResult[] = [];
+      
+      // Search S5 (live data) across all timeframes
+      for (const timeframe of timeframes) {
+        const entry = await searchUserInLeaderboard(searchTerm, timeframe);
+        results.push({
+          season: "s5",
+          timeframe,
+          rank: entry?.rank || null,
+          mindshare: entry?.mindshare || null,
+          username: entry?.displayName || entry?.username || null,
+          handle: entry ? `@${entry.username}` : null,
+          found: !!entry,
+        });
+      }
+      
+      // For S4, S3, S2, S1 - placeholder for historical data
+      // These would need to be populated from Airtable or another source
+      for (const season of seasons.slice(1)) {
+        for (const timeframe of timeframes) {
+          results.push({
+            season,
+            timeframe,
+            rank: null,
+            mindshare: null,
+            username: null,
+            handle: null,
+            found: false,
+          });
+        }
+      }
+      
+      // Find user info from any found result
+      const foundResult = results.find(r => r.found);
+      
+      res.json({
+        searchedUsername: searchTerm,
+        displayName: foundResult?.username || searchTerm,
+        handle: foundResult?.handle || `@${searchTerm}`,
+        results,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Error searching user:", error);
+      res.status(500).json({ error: "Failed to search for user" });
+    }
   });
 
   return httpServer;

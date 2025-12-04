@@ -29,8 +29,8 @@ export function RankTable({ data }: RankTableProps) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.map((item) => (
-            <TableRow key={item.handle} className="border-black/10 hover:bg-black/5 transition-colors group">
+          {data.map((item, index) => (
+            <TableRow key={`${item.handle}-${item.rank}-${index}`} className="border-black/10 hover:bg-black/5 transition-colors group">
               <TableCell className="font-bold text-center text-lg">
                 <div className="flex items-center justify-center">
                   {item.rank === 1 && <span className="text-2xl drop-shadow-md">🥇</span>}
