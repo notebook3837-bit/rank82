@@ -6,7 +6,7 @@ import { TierSelector } from "@/components/tier-selector";
 import { TimeSelector } from "@/components/time-selector";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Flame, Trophy, Users, RefreshCw, Clock, ExternalLink, Loader2 } from "lucide-react";
+import { Search, Flame, Trophy, Users, RefreshCw, Clock, ExternalLink, Loader2, TrendingUp, TrendingDown, Award, BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface LeaderboardResponse {
@@ -134,6 +134,41 @@ export default function Leaderboard() {
     return filtered;
   }, [apiData, search]);
 
+  const insights = useMemo(() => {
+    if (!apiData?.data || apiData.data.length === 0) return null;
+    
+    const data = apiData.data;
+    
+    // Top 5 by mindshare
+    const topPerformers = [...data]
+      .sort((a, b) => b.mindshare - a.mindshare)
+      .slice(0, 5);
+    
+    // Top 5 trending (biggest positive delta)
+    const trending = [...data]
+      .filter(d => (d.mindshareDelta || 0) > 0)
+      .sort((a, b) => (b.mindshareDelta || 0) - (a.mindshareDelta || 0))
+      .slice(0, 5);
+    
+    // Top 5 declining (biggest negative delta)
+    const declining = [...data]
+      .filter(d => (d.mindshareDelta || 0) < 0)
+      .sort((a, b) => (a.mindshareDelta || 0) - (b.mindshareDelta || 0))
+      .slice(0, 5);
+    
+    // Stats
+    const totalMindshare = data.reduce((sum, d) => sum + d.mindshare, 0);
+    const avgMindshare = totalMindshare / data.length;
+    
+    return {
+      topPerformers,
+      trending,
+      declining,
+      totalCreators: data.length,
+      avgMindshare,
+    };
+  }, [apiData]);
+
   const lastUpdated = apiData?.lastUpdated ? new Date(apiData.lastUpdated) : null;
 
   return (
@@ -223,7 +258,7 @@ export default function Leaderboard() {
                 })()}
               </div>
               
-              {/* Rank Grid */}
+              {/* Rank Grid with Mindshare */}
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -243,6 +278,20 @@ export default function Leaderboard() {
                       
                       const isLive = season === "s5";
                       
+                      const RankCell = ({ result }: { result: UserRankResult | undefined }) => {
+                        if (!result?.found) {
+                          return <span className="text-black/30">—</span>;
+                        }
+                        return (
+                          <div className="flex flex-col items-center">
+                            <span className="font-bold text-black text-base">#{result.rank}</span>
+                            {result.mindshare !== null && result.mindshare !== undefined && (
+                              <span className="text-xs font-mono text-black/60">{result.mindshare.toFixed(4)}</span>
+                            )}
+                          </div>
+                        );
+                      };
+                      
                       return (
                         <tr key={season} className="border-b border-black/10 hover:bg-yellow-50">
                           <td className="py-3 px-3">
@@ -254,25 +303,13 @@ export default function Leaderboard() {
                             </div>
                           </td>
                           <td className="text-center py-3 px-3">
-                            {r24h?.found ? (
-                              <span className="font-bold text-black">#{r24h.rank}</span>
-                            ) : (
-                              <span className="text-black/30">—</span>
-                            )}
+                            <RankCell result={r24h} />
                           </td>
                           <td className="text-center py-3 px-3">
-                            {r7d?.found ? (
-                              <span className="font-bold text-black">#{r7d.rank}</span>
-                            ) : (
-                              <span className="text-black/30">—</span>
-                            )}
+                            <RankCell result={r7d} />
                           </td>
                           <td className="text-center py-3 px-3">
-                            {r30d?.found ? (
-                              <span className="font-bold text-black">#{r30d.rank}</span>
-                            ) : (
-                              <span className="text-black/30">—</span>
-                            )}
+                            <RankCell result={r30d} />
                           </td>
                         </tr>
                       );
@@ -282,7 +319,7 @@ export default function Leaderboard() {
               </div>
               
               <p className="mt-3 text-xs text-black/50">
-                S5 shows live ranks. S1-S4 historical data not yet available.
+                S5 shows live ranks with mindshare. S1-S4 historical data coming soon.
               </p>
             </div>
           )}
@@ -353,6 +390,106 @@ export default function Leaderboard() {
              className="bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
           />
         </div>
+
+        {/* Insights Section */}
+        {insights && (
+          <div className="mb-12 bg-white border-2 border-black rounded-xl p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+            <div className="flex items-center gap-2 mb-6">
+              <BarChart3 className="w-6 h-6 text-black" />
+              <h2 className="text-xl font-bold text-black">Leaderboard Analysis</h2>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Top Performers */}
+              <div className="bg-yellow-50 border-2 border-black rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Award className="w-5 h-5 text-yellow-600" />
+                  <h3 className="font-bold text-black">Top Performers</h3>
+                </div>
+                <div className="space-y-2">
+                  {insights.topPerformers.map((user, idx) => (
+                    <div key={`top-${user.handle}-${idx}`} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-black/50">#{idx + 1}</span>
+                        <img 
+                          src={`https://unavatar.io/twitter/${user.handle.replace('@', '')}`}
+                          alt={user.username}
+                          className="w-6 h-6 rounded-full border border-black"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${user.username}&size=24&background=000&color=fff`;
+                          }}
+                        />
+                        <span className="font-medium text-black truncate max-w-[100px]">{user.username}</span>
+                      </div>
+                      <span className="font-mono text-xs text-black/70">{user.mindshare.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Trending Up */}
+              <div className="bg-green-50 border-2 border-black rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <TrendingUp className="w-5 h-5 text-green-600" />
+                  <h3 className="font-bold text-black">Trending Up</h3>
+                </div>
+                <div className="space-y-2">
+                  {insights.trending.length > 0 ? insights.trending.map((user, idx) => (
+                    <div key={`trend-${user.handle}-${idx}`} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <img 
+                          src={`https://unavatar.io/twitter/${user.handle.replace('@', '')}`}
+                          alt={user.username}
+                          className="w-6 h-6 rounded-full border border-black"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${user.username}&size=24&background=000&color=fff`;
+                          }}
+                        />
+                        <span className="font-medium text-black truncate max-w-[100px]">{user.username}</span>
+                      </div>
+                      <span className="font-mono text-xs text-green-600 font-bold">+{(user.mindshareDelta || 0).toFixed(2)}</span>
+                    </div>
+                  )) : (
+                    <p className="text-sm text-black/50">No trending data</p>
+                  )}
+                </div>
+              </div>
+              
+              {/* Declining */}
+              <div className="bg-red-50 border-2 border-black rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <TrendingDown className="w-5 h-5 text-red-600" />
+                  <h3 className="font-bold text-black">Declining</h3>
+                </div>
+                <div className="space-y-2">
+                  {insights.declining.length > 0 ? insights.declining.map((user, idx) => (
+                    <div key={`decline-${user.handle}-${idx}`} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <img 
+                          src={`https://unavatar.io/twitter/${user.handle.replace('@', '')}`}
+                          alt={user.username}
+                          className="w-6 h-6 rounded-full border border-black"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${user.username}&size=24&background=000&color=fff`;
+                          }}
+                        />
+                        <span className="font-medium text-black truncate max-w-[100px]">{user.username}</span>
+                      </div>
+                      <span className="font-mono text-xs text-red-600 font-bold">{(user.mindshareDelta || 0).toFixed(2)}</span>
+                    </div>
+                  )) : (
+                    <p className="text-sm text-black/50">No declining data</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-4 pt-4 border-t border-black/10 flex items-center justify-between text-xs text-black/60">
+              <span>Avg Mindshare: <span className="font-mono font-bold">{insights.avgMindshare.toFixed(4)}</span></span>
+              <span>Analysis based on {insights.totalCreators} creators</span>
+            </div>
+          </div>
+        )}
 
         {/* Controls */}
         <div className="flex flex-col gap-6 mb-6">
