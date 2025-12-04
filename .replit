@@ -4,6 +4,7 @@ hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
 [nix]
 channel = "stable-24_05"
+packages = ["poppler_utils", "tesseract", "imagemagick", "ghostscript"]
 
 [deployment]
 deploymentTarget = "autoscale"
@@ -14,10 +15,6 @@ run = ["npm", "run", "start"]
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 34443
-externalPort = 3002
 
 [[ports]]
 localPort = 39899
