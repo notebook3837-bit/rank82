@@ -12,16 +12,16 @@ interface StatsCardProps {
 
 export function StatsCard({ icon: Icon, label, value, subValue, className }: StatsCardProps) {
   return (
-    <Card className={cn("border-border bg-card/50 backdrop-blur-sm", className)}>
+    <Card className={cn("rounded-xl", className)}>
       <CardContent className="p-6 flex items-center gap-4">
-        <div className="p-3 rounded-full bg-primary/10 text-primary">
+        <div className="p-3 rounded-lg bg-black text-white shadow-sm">
           <Icon className="w-6 h-6" />
         </div>
         <div>
-          <p className="text-sm text-muted-foreground font-medium mb-1">{label}</p>
+          <p className="text-sm text-black/60 font-bold uppercase tracking-wide mb-1">{label}</p>
           <div className="flex items-baseline gap-2">
-            <h3 className="text-2xl font-bold font-display tracking-tight">{value}</h3>
-            {subValue && <span className="text-xs text-muted-foreground">{subValue}</span>}
+            <h3 className="text-3xl font-bold font-display tracking-tighter text-black">{value}</h3>
+            {subValue && <span className="text-xs font-bold text-black/50 uppercase">{subValue}</span>}
           </div>
         </div>
       </CardContent>

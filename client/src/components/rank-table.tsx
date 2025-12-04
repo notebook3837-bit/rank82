@@ -1,7 +1,6 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { ArrowUp, ArrowDown, Minus, Trophy } from "lucide-react";
+import { ArrowUp, ArrowDown, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface RankData {
@@ -19,57 +18,57 @@ interface RankTableProps {
 
 export function RankTable({ data }: RankTableProps) {
   return (
-    <div className="rounded-xl border border-border bg-card/40 backdrop-blur-md overflow-hidden">
+    <div className="rounded-xl border-2 border-black bg-white overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
       <Table>
-        <TableHeader className="bg-secondary/30">
-          <TableRow className="hover:bg-transparent border-border">
-            <TableHead className="w-[80px] text-center">Rank</TableHead>
-            <TableHead>User</TableHead>
-            <TableHead className="text-right">Mindshare</TableHead>
-            <TableHead className="text-right w-[100px]">Change</TableHead>
+        <TableHeader className="bg-black">
+          <TableRow className="hover:bg-black border-none">
+            <TableHead className="w-[80px] text-center text-white font-bold">Rank</TableHead>
+            <TableHead className="text-white font-bold">User</TableHead>
+            <TableHead className="text-right text-white font-bold">Mindshare</TableHead>
+            <TableHead className="text-right w-[100px] text-white font-bold">Change</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {data.map((item) => (
-            <TableRow key={item.handle} className="border-border hover:bg-secondary/20 transition-colors group">
-              <TableCell className="font-medium text-center">
+            <TableRow key={item.handle} className="border-black/10 hover:bg-black/5 transition-colors group">
+              <TableCell className="font-bold text-center text-lg">
                 <div className="flex items-center justify-center">
-                  {item.rank === 1 && <span className="text-2xl">🥇</span>}
-                  {item.rank === 2 && <span className="text-2xl">🥈</span>}
-                  {item.rank === 3 && <span className="text-2xl">🥉</span>}
-                  {item.rank > 3 && <span className="text-muted-foreground font-mono">#{item.rank}</span>}
+                  {item.rank === 1 && <span className="text-2xl drop-shadow-md">🥇</span>}
+                  {item.rank === 2 && <span className="text-2xl drop-shadow-md">🥈</span>}
+                  {item.rank === 3 && <span className="text-2xl drop-shadow-md">🥉</span>}
+                  {item.rank > 3 && <span className="text-black/50 font-mono">#{item.rank}</span>}
                 </div>
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-3">
-                  <Avatar className="h-9 w-9 border border-border group-hover:border-primary/50 transition-colors">
+                  <Avatar className="h-10 w-10 border-2 border-black bg-yellow-300">
                     <AvatarImage src={item.avatarUrl} alt={item.username} />
-                    <AvatarFallback className="bg-secondary text-xs font-medium">
+                    <AvatarFallback className="bg-[#8DFF48] text-black font-bold border-2 border-transparent">
                       {item.username.substring(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col">
-                    <span className="font-medium text-foreground">{item.username}</span>
-                    <span className="text-xs text-muted-foreground">{item.handle}</span>
+                    <span className="font-bold text-black text-base">{item.username}</span>
+                    <span className="text-xs text-black/60 font-mono font-medium">{item.handle}</span>
                   </div>
                 </div>
               </TableCell>
               <TableCell className="text-right">
-                <span className="font-mono font-medium text-foreground">
+                <span className="font-mono font-bold text-black text-lg tracking-tight">
                   {item.mindshare.toFixed(4)}
                 </span>
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-1">
-                  {item.change > 0 && <ArrowUp className="w-3 h-3 text-primary" />}
-                  {item.change < 0 && <ArrowDown className="w-3 h-3 text-destructive" />}
-                  {item.change === 0 && <Minus className="w-3 h-3 text-muted-foreground" />}
+                  {item.change > 0 && <ArrowUp className="w-4 h-4 text-green-600 stroke-[3px]" />}
+                  {item.change < 0 && <ArrowDown className="w-4 h-4 text-red-600 stroke-[3px]" />}
+                  {item.change === 0 && <Minus className="w-4 h-4 text-black/20" />}
                   
                   <span className={cn(
-                    "text-xs font-mono",
-                    item.change > 0 && "text-primary",
-                    item.change < 0 && "text-destructive",
-                    item.change === 0 && "text-muted-foreground"
+                    "text-sm font-bold font-mono",
+                    item.change > 0 && "text-green-600",
+                    item.change < 0 && "text-red-600",
+                    item.change === 0 && "text-black/40"
                   )}>
                     {Math.abs(item.change)}%
                   </span>

@@ -1,5 +1,4 @@
 import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
 
 interface TierSelectorProps {
   currentTier: string;
@@ -16,26 +15,19 @@ const tiers = [
 
 export function TierSelector({ currentTier, onSelect }: TierSelectorProps) {
   return (
-    <div className="flex items-center overflow-x-auto pb-2 md:pb-0 gap-1 no-scrollbar">
+    <div className="flex items-center overflow-x-auto pb-2 md:pb-0 gap-2 no-scrollbar">
       {tiers.map((tier) => (
         <button
           key={tier.id}
           onClick={() => onSelect(tier.id)}
           className={cn(
-            "relative px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap rounded-md",
+            "relative px-4 py-2 text-sm font-bold transition-all whitespace-nowrap rounded-lg border-2",
             currentTier === tier.id
-              ? "text-primary-foreground"
-              : "text-muted-foreground hover:text-foreground"
+              ? "bg-black text-white border-black shadow-[2px_2px_0px_0px_rgba(255,255,255,0.5)]"
+              : "bg-white text-black border-black hover:translate-y-[-1px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
           )}
         >
-          {currentTier === tier.id && (
-            <motion.div
-              layoutId="activeTier"
-              className="absolute inset-0 bg-primary rounded-md"
-              transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-            />
-          )}
-          <span className="relative z-10">{tier.label}</span>
+          {tier.label}
         </button>
       ))}
     </div>

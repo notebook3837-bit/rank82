@@ -13,16 +13,16 @@ const ranges = [
 
 export function TimeSelector({ currentRange, onSelect }: TimeSelectorProps) {
   return (
-    <div className="inline-flex items-center p-1 rounded-lg bg-secondary/50 border border-border">
+    <div className="inline-flex items-center p-1 rounded-lg bg-white border-2 border-black">
       {ranges.map((range) => (
         <button
           key={range.id}
           onClick={() => onSelect(range.id)}
           className={cn(
-            "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+            "px-4 py-1.5 text-xs font-bold rounded-md transition-all",
             currentRange === range.id
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
+              ? "bg-black text-white"
+              : "text-black hover:bg-black/5"
           )}
         >
           {range.label}
