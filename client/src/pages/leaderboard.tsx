@@ -19,6 +19,7 @@ interface LeaderboardResponse {
     rank: number;
     username: string;
     handle: string;
+    avatarUrl?: string;
   }[];
 }
 
@@ -30,11 +31,23 @@ interface UserRankResult {
   found: boolean;
 }
 
+interface S5RankResult {
+  rank24h: number | null;
+  rank7d: number | null;
+  rank30d: number | null;
+  mindshare24h: number | null;
+  mindshare7d: number | null;
+  mindshare30d: number | null;
+  found: boolean;
+}
+
 interface SearchResponse {
   searchedUsername: string;
   displayName: string;
   handle: string;
+  profilePic: string;
   results: UserRankResult[];
+  s5: S5RankResult;
   timestamp: string;
 }
 
@@ -109,6 +122,7 @@ export default function Leaderboard() {
       rank: entry.rank,
       username: entry.username,
       handle: entry.handle,
+      avatarUrl: entry.avatarUrl,
     }));
     
     if (search) {
@@ -182,7 +196,7 @@ export default function Leaderboard() {
             <div className="mt-6 pt-6 border-t-2 border-black/10">
               <div className="flex items-center gap-3 mb-4">
                 <img 
-                  src={`https://unavatar.io/twitter/${searchResults.searchedUsername}`}
+                  src={searchResults.profilePic}
                   alt={searchResults.displayName}
                   className="w-12 h-12 rounded-full border-2 border-black object-cover"
                   onError={(e) => {
@@ -203,34 +217,114 @@ export default function Leaderboard() {
               </div>
               
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b-2 border-black">
-                      <th className="text-left py-2 px-3 font-bold text-black/70 uppercase tracking-wider text-xs">Season</th>
-                      <th className="text-center py-2 px-3 font-bold text-black/70 uppercase tracking-wider text-xs">Rank</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {["s4", "s3", "s2", "s1"].map((season) => {
-                      const result = searchResults.results.find(r => r.season === season);
-                      
-                      return (
-                        <tr key={season} className="border-b border-black/10 hover:bg-yellow-50">
-                          <td className="py-3 px-3">
-                            <span className="font-bold text-black uppercase">{season}</span>
-                          </td>
-                          <td className="text-center py-3 px-3">
-                            {result?.found ? (
-                              <span className="font-bold text-black text-base">#{result.rank}</span>
-                            ) : (
-                              <span className="text-black/30">Not ranked</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                {/* Season 5 Section - Always shown */}
+                <div className="mb-6">
+                  <h4 className="font-bold text-black text-sm uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <span className="bg-yellow-400 text-black px-2 py-0.5 rounded text-xs">S5</span>
+                    Season 5 (Active)
+                  </h4>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b-2 border-black">
+                        <th className="text-left py-2 px-3 font-bold text-black/70 uppercase tracking-wider text-xs">Timeframe</th>
+                        <th className="text-center py-2 px-3 font-bold text-black/70 uppercase tracking-wider text-xs">Rank</th>
+                        <th className="text-right py-2 px-3 font-bold text-black/70 uppercase tracking-wider text-xs">Mindshare</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-black/10 hover:bg-yellow-50">
+                        <td className="py-3 px-3">
+                          <span className="font-bold text-black">24 Hours</span>
+                        </td>
+                        <td className="text-center py-3 px-3">
+                          {searchResults.s5.rank24h ? (
+                            <span className="font-bold text-black text-base">#{searchResults.s5.rank24h}</span>
+                          ) : (
+                            <span className="text-black/30">Not ranked</span>
+                          )}
+                        </td>
+                        <td className="text-right py-3 px-3">
+                          {searchResults.s5.mindshare24h ? (
+                            <span className="font-mono text-black/80">{searchResults.s5.mindshare24h.toFixed(4)}%</span>
+                          ) : (
+                            <span className="text-black/30">-</span>
+                          )}
+                        </td>
+                      </tr>
+                      <tr className="border-b border-black/10 hover:bg-yellow-50">
+                        <td className="py-3 px-3">
+                          <span className="font-bold text-black">7 Days</span>
+                        </td>
+                        <td className="text-center py-3 px-3">
+                          {searchResults.s5.rank7d ? (
+                            <span className="font-bold text-black text-base">#{searchResults.s5.rank7d}</span>
+                          ) : (
+                            <span className="text-black/30">Not ranked</span>
+                          )}
+                        </td>
+                        <td className="text-right py-3 px-3">
+                          {searchResults.s5.mindshare7d ? (
+                            <span className="font-mono text-black/80">{searchResults.s5.mindshare7d.toFixed(4)}%</span>
+                          ) : (
+                            <span className="text-black/30">-</span>
+                          )}
+                        </td>
+                      </tr>
+                      <tr className="border-b border-black/10 hover:bg-yellow-50">
+                        <td className="py-3 px-3">
+                          <span className="font-bold text-black">30 Days</span>
+                        </td>
+                        <td className="text-center py-3 px-3">
+                          {searchResults.s5.rank30d ? (
+                            <span className="font-bold text-black text-base">#{searchResults.s5.rank30d}</span>
+                          ) : (
+                            <span className="text-black/30">Not ranked</span>
+                          )}
+                        </td>
+                        <td className="text-right py-3 px-3">
+                          {searchResults.s5.mindshare30d ? (
+                            <span className="font-mono text-black/80">{searchResults.s5.mindshare30d.toFixed(4)}%</span>
+                          ) : (
+                            <span className="text-black/30">-</span>
+                          )}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                
+                {/* Historical Seasons Section (S1-S4) */}
+                <div>
+                  <h4 className="font-bold text-black text-sm uppercase tracking-wider mb-3">Historical Seasons (Rank Only)</h4>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b-2 border-black">
+                        <th className="text-left py-2 px-3 font-bold text-black/70 uppercase tracking-wider text-xs">Season</th>
+                        <th className="text-center py-2 px-3 font-bold text-black/70 uppercase tracking-wider text-xs">Rank</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {["s4", "s3", "s2", "s1"].map((season) => {
+                        const result = searchResults.results.find(r => r.season === season);
+                        
+                        return (
+                          <tr key={season} className="border-b border-black/10 hover:bg-yellow-50">
+                            <td className="py-3 px-3">
+                              <span className="font-bold text-black uppercase">{season}</span>
+                            </td>
+                            <td className="text-center py-3 px-3">
+                              {result?.found ? (
+                                <span className="font-bold text-black text-base">#{result.rank}</span>
+                              ) : (
+                                <span className="text-black/30">Not ranked</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}

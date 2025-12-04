@@ -29,6 +29,16 @@ interface UserRankResult {
   found: boolean;
 }
 
+interface S5RankResult {
+  rank24h: number | null;
+  rank7d: number | null;
+  rank30d: number | null;
+  mindshare24h: number | null;
+  mindshare7d: number | null;
+  mindshare30d: number | null;
+  found: boolean;
+}
+
 const API_BASE = "https://leaderboard-bice-mu.vercel.app/api/zama";
 
 async function fetchLiveLeaderboard(timeframe: string, maxPages: number = 15): Promise<ApiEntry[]> {
@@ -119,13 +129,17 @@ export async function registerRoutes(
           .where(eq(leaderboardEntries.season, season))
           .orderBy(leaderboardEntries.rank);
         
-        const data = dbData.map(entry => ({
-          id: entry.id,
-          season: entry.season,
-          rank: entry.rank,
-          username: entry.username,
-          handle: entry.handle,
-        }));
+        const data = dbData.map(entry => {
+          const twitterHandle = entry.handle.replace('@', '');
+          return {
+            id: entry.id,
+            season: entry.season,
+            rank: entry.rank,
+            username: entry.username,
+            handle: entry.handle,
+            avatarUrl: `https://unavatar.io/twitter/${twitterHandle}`,
+          };
+        });
         
         res.json({
           season,
@@ -149,6 +163,7 @@ export async function registerRoutes(
           rank: entry.rank,
           username: entry.displayName || entry.username,
           handle: `@${entry.username}`,
+          avatarUrl: `https://unavatar.io/twitter/${entry.username}`,
         }));
         
         res.json({
@@ -210,14 +225,34 @@ export async function registerRoutes(
         });
       }
       
+      // Search S5 with all timeframes in parallel
+      const [user24h, user7d, user30d] = await Promise.all([
+        searchUserInLeaderboard(searchTerm, "24h"),
+        searchUserInLeaderboard(searchTerm, "7d"),
+        searchUserInLeaderboard(searchTerm, "30d"),
+      ]);
+      
+      const s5Result: S5RankResult = {
+        rank24h: user24h?.rank || null,
+        rank7d: user7d?.rank || null,
+        rank30d: user30d?.rank || null,
+        mindshare24h: user24h?.mindshare || null,
+        mindshare7d: user7d?.mindshare || null,
+        mindshare30d: user30d?.mindshare || null,
+        found: !!(user24h || user7d || user30d),
+      };
+      
       // Find user info from any found result
       const foundResult = results.find(r => r.found);
+      const s5User = user30d || user7d || user24h;
       
       res.json({
         searchedUsername: searchTerm,
-        displayName: foundResult?.username || searchTerm,
-        handle: foundResult?.handle || `@${searchTerm}`,
+        displayName: s5User?.displayName || foundResult?.username || searchTerm,
+        handle: s5User ? `@${s5User.username}` : (foundResult?.handle || `@${searchTerm}`),
+        profilePic: s5User ? `https://unavatar.io/twitter/${s5User.username}` : `https://unavatar.io/twitter/${searchTerm}`,
         results,
+        s5: s5Result,
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
