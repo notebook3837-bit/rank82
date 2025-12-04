@@ -1,6 +1,9 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import fetch from "node-fetch";
+import { db } from "./db";
+import { leaderboardEntries } from "@shared/schema";
+import { eq, ilike, or } from "drizzle-orm";
 
 interface ApiEntry {
   rank: number;
@@ -20,9 +23,7 @@ interface ApiResponse {
 
 interface UserRankResult {
   season: string;
-  timeframe: string;
   rank: number | null;
-  mindshare: number | null;
   username: string | null;
   handle: string | null;
   found: boolean;
@@ -105,20 +106,41 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   
-  // GET /api/leaderboard/:season - Get live leaderboard data for a season
+  // GET /api/leaderboard/:season - Get leaderboard data for a season
   app.get("/api/leaderboard/:season", async (req, res) => {
     try {
       const { season } = req.params;
-      const { range } = req.query;
       
-      // Map our range params to API timeframe
-      let timeframe = "30d";
-      if (range === "24h") timeframe = "24h";
-      else if (range === "7d") timeframe = "7d";
-      else if (range === "30d") timeframe = "30d";
-      
-      // Only fetch live data for Season 5 (current season)
-      if (season === "s5") {
+      // For historical seasons (s1-s4), fetch from database
+      if (["s1", "s2", "s3", "s4"].includes(season)) {
+        const dbData = await db
+          .select()
+          .from(leaderboardEntries)
+          .where(eq(leaderboardEntries.season, season))
+          .orderBy(leaderboardEntries.rank);
+        
+        const data = dbData.map(entry => ({
+          id: entry.id,
+          season: entry.season,
+          rank: entry.rank,
+          username: entry.username,
+          handle: entry.handle,
+        }));
+        
+        res.json({
+          season,
+          count: data.length,
+          lastUpdated: dbData[0]?.scrapedAt?.toISOString() || null,
+          data,
+        });
+      } else if (season === "s5") {
+        // For Season 5, fetch live data
+        const { range } = req.query;
+        let timeframe = "30d";
+        if (range === "24h") timeframe = "24h";
+        else if (range === "7d") timeframe = "7d";
+        else if (range === "30d") timeframe = "30d";
+        
         const liveData = await fetchLiveLeaderboard(timeframe);
         
         const data = liveData.map(entry => ({
@@ -127,26 +149,20 @@ export async function registerRoutes(
           rank: entry.rank,
           username: entry.displayName || entry.username,
           handle: `@${entry.username}`,
-          mindshare: entry.mindshare,
-          mindshareDelta: entry.mindshareDelta,
-          scrapedAt: new Date().toISOString(),
         }));
         
         res.json({
           season,
-          range: timeframe,
           count: data.length,
           lastUpdated: new Date().toISOString(),
           data,
         });
       } else {
-        // For older seasons, return empty or historical data message
         res.json({
           season,
-          range: range || "30d",
           count: 0,
           lastUpdated: null,
-          message: `Season ${season.toUpperCase()} is closed. Historical data not available via live API.`,
+          message: `Season ${season} not found.`,
           data: [],
         });
       }
@@ -161,49 +177,37 @@ export async function registerRoutes(
     res.json({ success: true, message: "Data is fetched live from API" });
   });
 
-  // GET /api/search/:username - Search for a user across all seasons and time ranges
+  // GET /api/search/:username - Search for a user across all seasons
   app.get("/api/search/:username", async (req, res) => {
     try {
       const { username } = req.params;
-      const searchTerm = username.replace('@', '');
+      const searchTerm = username.replace('@', '').toLowerCase();
       
       if (!searchTerm || searchTerm.length < 2) {
         return res.status(400).json({ error: "Username must be at least 2 characters" });
       }
       
-      const timeframes = ["24h", "7d", "30d"];
-      const seasons = ["s5", "s4", "s3", "s2", "s1"];
-      
       const results: UserRankResult[] = [];
       
-      // Search S5 (live data) across all timeframes
-      for (const timeframe of timeframes) {
-        const entry = await searchUserInLeaderboard(searchTerm, timeframe);
+      // Search S1-S4 in database
+      for (const season of ["s1", "s2", "s3", "s4"]) {
+        const dbResults = await db
+          .select()
+          .from(leaderboardEntries)
+          .where(eq(leaderboardEntries.season, season));
+        
+        const found = dbResults.find(entry => 
+          entry.handle.toLowerCase().includes(searchTerm) ||
+          entry.username.toLowerCase().includes(searchTerm)
+        );
+        
         results.push({
-          season: "s5",
-          timeframe,
-          rank: entry?.rank || null,
-          mindshare: entry?.mindshare || null,
-          username: entry?.displayName || entry?.username || null,
-          handle: entry ? `@${entry.username}` : null,
-          found: !!entry,
+          season,
+          rank: found?.rank || null,
+          username: found?.username || null,
+          handle: found?.handle || null,
+          found: !!found,
         });
-      }
-      
-      // For S4, S3, S2, S1 - placeholder for historical data
-      // These would need to be populated from Airtable or another source
-      for (const season of seasons.slice(1)) {
-        for (const timeframe of timeframes) {
-          results.push({
-            season,
-            timeframe,
-            rank: null,
-            mindshare: null,
-            username: null,
-            handle: null,
-            found: false,
-          });
-        }
       }
       
       // Find user info from any found result
