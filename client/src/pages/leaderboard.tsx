@@ -146,12 +146,12 @@ export default function Leaderboard() {
           <div className="flex flex-col md:flex-row items-center gap-4">
             <div className="flex-1 w-full">
               <label className="block text-sm font-bold uppercase tracking-wider text-black/70 mb-2">
-                Search Username
+                Search X Username
               </label>
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-black/50" />
                 <Input 
-                  placeholder="Enter X username to find your rank..." 
+                  placeholder="Search X username..." 
                   className="pl-14 pr-4 bg-yellow-50 border-2 border-black focus:ring-2 focus:ring-yellow-400 focus:border-black h-14 text-lg font-medium placeholder:text-black/40 rounded-lg"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -187,14 +187,40 @@ export default function Leaderboard() {
           {/* User Rank Summary */}
           {searchResults && (
             <div className="mt-6 pt-6 border-t-2 border-black/10">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-black text-white rounded-full flex items-center justify-center font-bold text-lg">
-                  {searchResults.displayName.charAt(0).toUpperCase()}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <img 
+                    src={`https://unavatar.io/twitter/${searchResults.searchedUsername}`}
+                    alt={searchResults.displayName}
+                    className="w-12 h-12 rounded-full border-2 border-black object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${searchResults.displayName}&background=000&color=fff&bold=true`;
+                    }}
+                  />
+                  <div>
+                    <h3 className="font-bold text-lg text-black">{searchResults.displayName}</h3>
+                    <a 
+                      href={`https://x.com/${searchResults.searchedUsername}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 hover:underline font-medium"
+                    >
+                      {searchResults.handle}
+                    </a>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-lg text-black">{searchResults.displayName}</h3>
-                  <p className="text-sm text-black/60">{searchResults.handle}</p>
-                </div>
+                {(() => {
+                  const s5_30d = searchResults.results.find(r => r.season === "s5" && r.timeframe === "30d");
+                  if (s5_30d?.found && s5_30d.mindshare) {
+                    return (
+                      <div className="text-right">
+                        <div className="text-xs font-bold uppercase tracking-wider text-black/60">Mindshare</div>
+                        <div className="text-2xl font-mono font-bold text-black">{s5_30d.mindshare.toFixed(4)}</div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
               
               {/* Rank Grid */}
