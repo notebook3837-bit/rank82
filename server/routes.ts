@@ -41,6 +41,27 @@ interface S5RankResult {
 
 const API_BASE = "https://leaderboard-bice-mu.vercel.app/api/zama";
 
+// Helper to extract Twitter username from various formats:
+// - https://x.com/DeRonin_ -> deronin_
+// - https://twitter.com/DeRonin_ -> deronin_
+// - x.com/DeRonin_ -> deronin_
+// - @DeRonin_ -> deronin_
+// - DeRonin_ -> deronin_
+function extractTwitterHandle(input: string): string {
+  if (!input) return '';
+  
+  let handle = input.trim();
+  
+  // Remove URL parts if present
+  handle = handle.replace(/^https?:\/\//i, ''); // Remove http:// or https://
+  handle = handle.replace(/^(www\.)?(x\.com|twitter\.com)\//i, ''); // Remove x.com/ or twitter.com/
+  handle = handle.replace(/\?.*$/, ''); // Remove query string
+  handle = handle.replace(/\/$/, ''); // Remove trailing slash
+  handle = handle.replace(/^@/, ''); // Remove leading @
+  
+  return handle.toLowerCase();
+}
+
 async function fetchLiveLeaderboard(timeframe: string, maxPages: number = 15): Promise<ApiEntry[]> {
   const allEntries: ApiEntry[] = [];
   
@@ -211,11 +232,13 @@ export async function registerRoutes(
           .from(leaderboardEntries)
           .where(eq(leaderboardEntries.season, season));
         
-        // Search by handle (without @) or username (display name)
+        // Search by Twitter handle (extracted from URL or @handle) or display name
         const found = dbResults.find(entry => {
-          const handleWithoutAt = entry.handle.replace('@', '').toLowerCase();
-          return handleWithoutAt.includes(searchTerm) ||
-            entry.username.toLowerCase().includes(searchTerm);
+          const extractedHandle = extractTwitterHandle(entry.handle);
+          const displayName = entry.username.toLowerCase();
+          return extractedHandle.includes(searchTerm) ||
+            searchTerm.includes(extractedHandle) ||
+            displayName.includes(searchTerm);
         });
         
         results.push({
@@ -248,7 +271,7 @@ export async function registerRoutes(
       const foundResult = results.find(r => r.found);
       const s5User = user30d || user7d || user24h;
       
-      // Get the actual Twitter handle for profile picture
+      // Get the actual Twitter handle for profile picture using the helper
       let twitterHandle = searchTerm;
       let displayName = searchTerm;
       let handleDisplay = `@${searchTerm}`;
@@ -258,10 +281,10 @@ export async function registerRoutes(
         displayName = s5User.displayName || s5User.username;
         handleDisplay = `@${s5User.username}`;
       } else if (foundResult?.handle) {
-        // Extract handle from S1-S4 result (remove @ prefix)
-        twitterHandle = foundResult.handle.replace('@', '');
+        // Extract handle from S1-S4 result using the helper (handles URLs, @handles, etc.)
+        twitterHandle = extractTwitterHandle(foundResult.handle) || searchTerm;
         displayName = foundResult.username || twitterHandle;
-        handleDisplay = foundResult.handle;
+        handleDisplay = `@${twitterHandle}`;
       }
       
       res.json({
