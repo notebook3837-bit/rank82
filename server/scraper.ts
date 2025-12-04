@@ -1,119 +1,84 @@
 import fetch from "node-fetch";
-import * as cheerio from "cheerio";
 import type { InsertLeaderboardEntry } from "@shared/schema";
 
-interface ScrapedEntry {
-  rank: number;
-  username: string;
-  handle: string;
-  mindshare: number;
+interface ApiResponse {
+  success: boolean;
+  data: {
+    rank: number;
+    username: string;
+    twitterId: string;
+    displayName: string;
+    mindshare: number;
+    mindshareDelta: number;
+    snaps: number;
+    snapsDelta: number;
+  }[];
 }
 
-export async function scrapeZamaLeaderboard(season: string = "s5"): Promise<InsertLeaderboardEntry[]> {
-  try {
-    const response = await fetch("https://www.zama.org/programs/creator-program");
-    const html = await response.text();
-    const $ = cheerio.load(html);
+const API_BASE = "https://leaderboard-bice-mu.vercel.app/api/zama";
 
-    const entries: InsertLeaderboardEntry[] = [];
-    
-    // The Zama website uses a table structure for leaderboard
-    // We need to parse the HTML to extract rank, username, handle, and mindshare
-    // This is a simplified parser - adjust selectors based on actual HTML structure
-    
-    $('tr').each((index, element) => {
-      const $row = $(element);
-      const cells = $row.find('td');
-      
-      if (cells.length >= 3) {
-        const rankText = $(cells[0]).text().trim();
-        const rank = parseInt(rankText.replace(/[^\d]/g, ''));
-        
-        if (!isNaN(rank)) {
-          const usernameCell = $(cells[1]);
-          const username = usernameCell.find('span').first().text().trim() || 
-                          usernameCell.text().split('@')[0].trim();
-          
-          const handleMatch = usernameCell.text().match(/@[\w_]+/);
-          const handle = handleMatch ? handleMatch[0] : `@user${rank}`;
-          
-          const mindshareText = $(cells[2]).text().trim();
-          const mindshare = parseFloat(mindshareText) || 0;
-          
-          if (username && mindshare > 0) {
-            entries.push({
-              season,
-              rank,
-              username,
-              handle,
-              mindshare,
-            });
-          }
-        }
-      }
-    });
-
-    // Fallback to parsing from text content if table parsing fails
-    if (entries.length === 0) {
-      console.log("Table parsing failed, trying text parsing...");
-      const textEntries = parseLeaderboardFromText(html, season);
-      return textEntries;
-    }
-
-    console.log(`Scraped ${entries.length} entries for ${season}`);
-    return entries;
-  } catch (error) {
-    console.error("Error scraping Zama leaderboard:", error);
-    return [];
-  }
-}
-
-function parseLeaderboardFromText(html: string, season: string): InsertLeaderboardEntry[] {
-  const entries: InsertLeaderboardEntry[] = [];
+export async function scrapeZamaLeaderboard(
+  season: string = "s5",
+  timeframe: string = "30d"
+): Promise<InsertLeaderboardEntry[]> {
+  const allEntries: InsertLeaderboardEntry[] = [];
+  let page = 1;
+  let hasMore = true;
   
-  // Pattern: rank emoji/number, username, @handle, mindshare number
-  const patterns = [
-    /(?:🥇|🥈|🥉|(\d+))\s+([A-Z]{2})\s+([\w\s]+?)\s+(@[\w_]+)\s+([\d.]+)/g,
-    /(\d+)\s+([\w\s]+?)\s+(@[\w_]+)\s+([\d.]+)/g
-  ];
-
-  for (const pattern of patterns) {
-    const matchesArray = Array.from(html.matchAll(pattern));
-    for (const match of matchesArray) {
-      let rank: number;
-      let username: string;
-      let handle: string;
-      let mindshare: number;
-
-      if (match[1] && match[2] && match[3] && match[4] && match[5]) {
-        // First pattern with emoji
-        rank = parseInt(match[1]) || (match[0].includes('🥇') ? 1 : match[0].includes('🥈') ? 2 : 3);
-        username = match[3].trim();
-        handle = match[4];
-        mindshare = parseFloat(match[5]);
-      } else if (match[1] && match[2] && match[3] && match[4]) {
-        // Second pattern
-        rank = parseInt(match[1]);
-        username = match[2].trim();
-        handle = match[3];
-        mindshare = parseFloat(match[4]);
-      } else {
-        continue;
+  console.log(`Fetching leaderboard data for ${season} (${timeframe})...`);
+  
+  try {
+    while (hasMore && page <= 20) {
+      const url = `${API_BASE}?timeframe=${timeframe}&sortBy=mindshare&page=${page}`;
+      
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': 'application/json',
+        }
+      });
+      
+      if (!response.ok) {
+        console.error(`API error: ${response.status}`);
+        break;
       }
-
-      if (!isNaN(rank) && username && handle && !isNaN(mindshare) && mindshare > 0) {
-        entries.push({
+      
+      const json = await response.json() as ApiResponse;
+      
+      if (!json.success || !json.data || json.data.length === 0) {
+        hasMore = false;
+        break;
+      }
+      
+      for (const entry of json.data) {
+        allEntries.push({
           season,
-          rank,
-          username,
-          handle,
-          mindshare,
+          rank: entry.rank,
+          username: entry.displayName || entry.username,
+          handle: `@${entry.username}`,
+          mindshare: entry.mindshare,
         });
       }
+      
+      console.log(`Fetched page ${page}: ${json.data.length} entries (total: ${allEntries.length})`);
+      
+      if (json.data.length < 100) {
+        hasMore = false;
+      }
+      
+      page++;
+      
+      await new Promise(resolve => setTimeout(resolve, 200));
     }
-
-    if (entries.length > 0) break;
+    
+    console.log(`Total scraped: ${allEntries.length} entries for ${season} (${timeframe})`);
+    return allEntries;
+  } catch (error) {
+    console.error("Error scraping Zama leaderboard:", error);
+    return allEntries;
   }
+}
 
-  return entries;
+export async function fetchLeaderboardByTimeframe(timeframe: string): Promise<InsertLeaderboardEntry[]> {
+  return scrapeZamaLeaderboard("s5", timeframe);
 }

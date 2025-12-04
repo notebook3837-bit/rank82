@@ -1,99 +1,115 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import fetch from "node-fetch";
+
+interface ApiEntry {
+  rank: number;
+  username: string;
+  twitterId: string;
+  displayName: string;
+  mindshare: number;
+  mindshareDelta: number;
+  snaps: number;
+  snapsDelta: number;
+}
+
+interface ApiResponse {
+  success: boolean;
+  data: ApiEntry[];
+}
+
+const API_BASE = "https://leaderboard-bice-mu.vercel.app/api/zama";
+
+async function fetchLiveLeaderboard(timeframe: string, maxPages: number = 15): Promise<ApiEntry[]> {
+  const allEntries: ApiEntry[] = [];
+  
+  for (let page = 1; page <= maxPages; page++) {
+    try {
+      const url = `${API_BASE}?timeframe=${timeframe}&sortBy=mindshare&page=${page}`;
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': 'application/json',
+        }
+      });
+      
+      if (!response.ok) break;
+      
+      const json = await response.json() as ApiResponse;
+      
+      if (!json.success || !json.data || json.data.length === 0) break;
+      
+      allEntries.push(...json.data);
+      
+      if (json.data.length < 100) break;
+    } catch (error) {
+      console.error(`Error fetching page ${page}:`, error);
+      break;
+    }
+  }
+  
+  return allEntries;
+}
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
   
-  // GET /api/leaderboard/:season - Get leaderboard data for a season with optional time range
+  // GET /api/leaderboard/:season - Get live leaderboard data for a season
   app.get("/api/leaderboard/:season", async (req, res) => {
     try {
       const { season } = req.params;
       const { range } = req.query;
       
-      let hoursAgo: number | undefined;
+      // Map our range params to API timeframe
+      let timeframe = "30d";
+      if (range === "24h") timeframe = "24h";
+      else if (range === "7d") timeframe = "7d";
+      else if (range === "30d") timeframe = "30d";
       
-      // Map time ranges to hours
-      if (range === '24h') {
-        hoursAgo = 24;
-      } else if (range === '7d') {
-        hoursAgo = 24 * 7;
-      } else if (range === '30d') {
-        hoursAgo = 24 * 30;
-      }
-      
-      // Get data based on the time range
-      let data;
-      if (hoursAgo !== undefined) {
-        // Get entries within the time range and aggregate to get latest rank per user
-        const entries = await storage.getLeaderboardEntries(season, hoursAgo);
+      // Only fetch live data for Season 5 (current season)
+      if (season === "s5") {
+        const liveData = await fetchLiveLeaderboard(timeframe);
         
-        // If we have entries from this time range, aggregate to get latest per user
-        if (entries.length > 0) {
-          // Group by handle and take the most recent entry for each user
-          const userMap = new Map<string, typeof entries[0]>();
-          for (const entry of entries) {
-            const existing = userMap.get(entry.handle);
-            if (!existing || entry.scrapedAt > existing.scrapedAt) {
-              userMap.set(entry.handle, entry);
-            }
-          }
-          data = Array.from(userMap.values()).sort((a, b) => a.rank - b.rank);
-        } else {
-          // Fall back to latest data if no entries in range
-          data = await storage.getLatestLeaderboardData(season);
-        }
+        const data = liveData.map(entry => ({
+          id: 0,
+          season,
+          rank: entry.rank,
+          username: entry.displayName || entry.username,
+          handle: `@${entry.username}`,
+          mindshare: entry.mindshare,
+          mindshareDelta: entry.mindshareDelta,
+          scrapedAt: new Date().toISOString(),
+        }));
+        
+        res.json({
+          season,
+          range: timeframe,
+          count: data.length,
+          lastUpdated: new Date().toISOString(),
+          data,
+        });
       } else {
-        // No range specified, get latest data
-        data = await storage.getLatestLeaderboardData(season);
+        // For older seasons, return empty or historical data message
+        res.json({
+          season,
+          range: range || "30d",
+          count: 0,
+          lastUpdated: null,
+          message: `Season ${season.toUpperCase()} is closed. Historical data not available via live API.`,
+          data: [],
+        });
       }
-      
-      res.json({
-        season,
-        range: range || 'latest',
-        count: data.length,
-        lastUpdated: data[0]?.scrapedAt || null,
-        data,
-      });
     } catch (error) {
       console.error("Error fetching leaderboard:", error);
       res.status(500).json({ error: "Failed to fetch leaderboard data" });
     }
   });
 
-  // GET /api/leaderboard/:season/history - Get historical data with changes
-  app.get("/api/leaderboard/:season/history", async (req, res) => {
-    try {
-      const { season } = req.params;
-      const { hours } = req.query;
-      
-      const hoursAgo = hours ? parseInt(hours as string) : undefined;
-      const entries = await storage.getLeaderboardEntries(season, hoursAgo);
-      
-      res.json({
-        season,
-        hoursAgo,
-        count: entries.length,
-        data: entries,
-      });
-    } catch (error) {
-      console.error("Error fetching history:", error);
-      res.status(500).json({ error: "Failed to fetch historical data" });
-    }
-  });
-
-  // POST /api/scraper/trigger - Manually trigger scraper (for testing)
-  app.post("/api/scraper/trigger", async (req, res) => {
-    try {
-      const { runScraper } = await import("./scheduler");
-      await runScraper();
-      res.json({ success: true, message: "Scraper triggered successfully" });
-    } catch (error) {
-      console.error("Error triggering scraper:", error);
-      res.status(500).json({ error: "Failed to trigger scraper" });
-    }
+  // POST /api/refresh - Manually refresh data (for testing)
+  app.post("/api/refresh", async (_req, res) => {
+    res.json({ success: true, message: "Data is fetched live from API" });
   });
 
   return httpServer;

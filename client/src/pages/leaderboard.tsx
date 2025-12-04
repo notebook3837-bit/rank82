@@ -14,6 +14,7 @@ interface LeaderboardResponse {
   range: string;
   count: number;
   lastUpdated: string | null;
+  message?: string;
   data: {
     id: number;
     season: string;
@@ -21,6 +22,7 @@ interface LeaderboardResponse {
     username: string;
     handle: string;
     mindshare: number;
+    mindshareDelta?: number;
     scrapedAt: string;
   }[];
 }
@@ -60,7 +62,7 @@ export default function Leaderboard() {
       username: entry.username,
       handle: entry.handle,
       mindshare: entry.mindshare,
-      change: 0, // TODO: Calculate change from historical data
+      change: entry.mindshareDelta || 0,
     }));
     
     // Filter by search

@@ -67,17 +67,17 @@ export function RankTable({ data }: RankTableProps) {
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-1">
-                  {item.change > 0 && <ArrowUp className="w-4 h-4 text-green-600 stroke-[3px]" />}
-                  {item.change < 0 && <ArrowDown className="w-4 h-4 text-red-600 stroke-[3px]" />}
-                  {item.change === 0 && <Minus className="w-4 h-4 text-black/20" />}
+                  {item.change > 0.001 && <ArrowUp className="w-4 h-4 text-green-600 stroke-[3px]" />}
+                  {item.change < -0.001 && <ArrowDown className="w-4 h-4 text-red-600 stroke-[3px]" />}
+                  {Math.abs(item.change) <= 0.001 && <Minus className="w-4 h-4 text-black/20" />}
                   
                   <span className={cn(
                     "text-sm font-bold font-mono",
-                    item.change > 0 && "text-green-600",
-                    item.change < 0 && "text-red-600",
-                    item.change === 0 && "text-black/40"
+                    item.change > 0.001 && "text-green-600",
+                    item.change < -0.001 && "text-red-600",
+                    Math.abs(item.change) <= 0.001 && "text-black/40"
                   )}>
-                    {Math.abs(item.change)}%
+                    {item.change > 0 ? "+" : ""}{item.change.toFixed(2)}
                   </span>
                 </div>
               </TableCell>
