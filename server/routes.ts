@@ -7,7 +7,7 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   
-  // GET /api/leaderboard/:season - Get latest leaderboard data for a season
+  // GET /api/leaderboard/:season - Get leaderboard data for a season with optional time range
   app.get("/api/leaderboard/:season", async (req, res) => {
     try {
       const { season } = req.params;
@@ -24,7 +24,31 @@ export async function registerRoutes(
         hoursAgo = 24 * 30;
       }
       
-      const data = await storage.getLatestLeaderboardData(season);
+      // Get data based on the time range
+      let data;
+      if (hoursAgo !== undefined) {
+        // Get entries within the time range and aggregate to get latest rank per user
+        const entries = await storage.getLeaderboardEntries(season, hoursAgo);
+        
+        // If we have entries from this time range, aggregate to get latest per user
+        if (entries.length > 0) {
+          // Group by handle and take the most recent entry for each user
+          const userMap = new Map<string, typeof entries[0]>();
+          for (const entry of entries) {
+            const existing = userMap.get(entry.handle);
+            if (!existing || entry.scrapedAt > existing.scrapedAt) {
+              userMap.set(entry.handle, entry);
+            }
+          }
+          data = Array.from(userMap.values()).sort((a, b) => a.rank - b.rank);
+        } else {
+          // Fall back to latest data if no entries in range
+          data = await storage.getLatestLeaderboardData(season);
+        }
+      } else {
+        // No range specified, get latest data
+        data = await storage.getLatestLeaderboardData(season);
+      }
       
       res.json({
         season,

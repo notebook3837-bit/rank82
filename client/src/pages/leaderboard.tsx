@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { RankTable, RankData } from "@/components/rank-table";
 import { StatsCard } from "@/components/stats-card";
@@ -6,7 +6,7 @@ import { TierSelector } from "@/components/tier-selector";
 import { TimeSelector } from "@/components/time-selector";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Flame, Trophy, Users, RefreshCw, Clock } from "lucide-react";
+import { Search, Flame, Trophy, Users, RefreshCw, Clock, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface LeaderboardResponse {
@@ -82,6 +82,41 @@ export default function Leaderboard() {
       
       <div className="relative z-10 container mx-auto px-4 py-8 md:py-12 max-w-6xl">
         
+        {/* Prominent Search Section at Top */}
+        <div className="mb-8 bg-white border-2 border-black rounded-xl p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+          <div className="flex flex-col md:flex-row items-center gap-4">
+            <div className="flex-1 w-full">
+              <label className="block text-sm font-bold uppercase tracking-wider text-black/70 mb-2">
+                Search Username
+              </label>
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-black/50" />
+                <Input 
+                  placeholder="Enter X username to find your rank..." 
+                  className="pl-14 pr-4 bg-yellow-50 border-2 border-black focus:ring-2 focus:ring-yellow-400 focus:border-black h-14 text-lg font-medium placeholder:text-black/40 rounded-lg"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  data-testid="input-search"
+                />
+              </div>
+            </div>
+            <Button 
+              onClick={handleRefresh}
+              disabled={isLoading}
+              className="h-14 px-8 border-2 border-black bg-black text-white hover:bg-yellow-400 hover:text-black transition-all text-lg font-bold rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)]"
+              data-testid="button-refresh"
+            >
+              <RefreshCw className={`h-5 w-5 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh Data
+            </Button>
+          </div>
+          {search && (
+            <div className="mt-3 text-sm font-medium text-black/70">
+              Showing results for "<span className="text-black font-bold">{search}</span>" - {filteredData.length} user{filteredData.length !== 1 ? 's' : ''} found
+            </div>
+          )}
+        </div>
+        
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
           <div>
@@ -107,6 +142,14 @@ export default function Leaderboard() {
                <div className="text-xs font-bold uppercase tracking-wider text-black/60 mb-1">Snapshot</div>
                <div className="text-lg font-mono font-bold text-black">Dec 31, 23:59 AoE</div>
              </div>
+             <a 
+               href="https://www.zama.org/programs/creator-program" 
+               target="_blank" 
+               rel="noopener noreferrer"
+               className="flex items-center gap-2 text-sm font-bold text-black hover:underline"
+             >
+               View on Zama <ExternalLink className="w-4 h-4" />
+             </a>
           </div>
         </div>
 
@@ -138,30 +181,7 @@ export default function Leaderboard() {
         <div className="flex flex-col gap-6 mb-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <TierSelector currentTier={tier} onSelect={setTier} />
-            
-            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center w-full md:w-auto">
-               <TimeSelector currentRange={range} onSelect={setRange} />
-               <div className="relative w-full sm:w-64">
-                 <Search className="absolute left-3 top-3 h-4 w-4 text-black/50" />
-                 <Input 
-                   placeholder="Search user..." 
-                   className="pl-10 bg-white border-2 border-black focus:ring-0 focus:border-black h-10 font-medium placeholder:text-black/40"
-                   value={search}
-                   onChange={(e) => setSearch(e.target.value)}
-                   data-testid="input-search"
-                 />
-               </div>
-               <Button 
-                 variant="outline" 
-                 size="icon"
-                 onClick={handleRefresh}
-                 disabled={isLoading}
-                 className="h-10 w-10 border-2 border-black bg-white hover:bg-black hover:text-white transition-all"
-                 data-testid="button-refresh"
-               >
-                 <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-               </Button>
-            </div>
+            <TimeSelector currentRange={range} onSelect={setRange} />
           </div>
           
           <div className="flex items-center justify-between text-xs font-mono text-black/60 px-1">

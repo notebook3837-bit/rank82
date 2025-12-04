@@ -41,15 +41,22 @@ export function RankTable({ data }: RankTableProps) {
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10 border-2 border-black bg-yellow-300">
+                  <Avatar className="h-10 w-10 border-2 border-black">
                     <AvatarImage src={item.avatarUrl} alt={item.username} />
-                    <AvatarFallback className="bg-[#8DFF48] text-black font-bold border-2 border-transparent">
+                    <AvatarFallback className="bg-yellow-400 text-black font-bold border-2 border-transparent">
                       {item.username.substring(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col">
                     <span className="font-bold text-black text-base">{item.username}</span>
-                    <span className="text-xs text-black/60 font-mono font-medium">{item.handle}</span>
+                    <a 
+                      href={`https://x.com/${item.handle.replace('@', '')}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-xs text-blue-600 hover:text-blue-800 font-mono font-medium hover:underline"
+                    >
+                      {item.handle}
+                    </a>
                   </div>
                 </div>
               </TableCell>

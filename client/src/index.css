@@ -36,7 +36,7 @@
 /* Zama Yellow Theme (High Contrast) */
 :root {
   /* Yellow Mode Default */
-  --background: 88 100% 64%; /* #8DFF48 (Zama Yellow) */
+  --background: 60 100% 50%; /* Bright Yellow */
   --foreground: 240 10% 4%;  /* Almost Black */
   
   --card: 0 0% 100%;         /* White cards */
