@@ -338,17 +338,9 @@ export default function Leaderboard() {
         
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
           <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="bg-black text-white px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-sm">
-                Historical Data
-              </div>
-            </div>
             <h1 className="text-5xl md:text-7xl font-bold tracking-tighter mb-4 text-black">
-              ZAMA<br/>CREATOR<br/>PROGRAM
+              ZAMA<br/>LIVE RANK<br/>CHECKER
             </h1>
-            <p className="text-black/80 text-xl max-w-2xl font-medium">
-              Historical leaderboard rankings from Seasons 1-4.
-            </p>
           </div>
           
           <div className="flex flex-col items-end gap-2">
