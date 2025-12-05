@@ -259,20 +259,8 @@ export default function Leaderboard() {
                       <p className="text-lg font-bold text-black/80 mb-4">
                         Follow <a href="https://x.com/sinceOctober8" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">@sinceOctober8</a> to see your live rank
                       </p>
-                      
-                      <a 
-                        href="https://t.me/alphaonly13" 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-cyan-400 text-white px-4 py-2 rounded-full font-bold text-base hover:from-blue-600 hover:to-cyan-500 transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] animate-pulse mb-4"
-                        data-testid="link-telegram-prompt"
-                      >
-                        <Send className="w-5 h-5" />
-                        Join Telegram for Airdrop Alpha Calls
-                      </a>
-                      
                       <p className="text-sm text-black/60 mb-6">
-                        Get ranking tips and exclusive alpha 🚀
+                        Get ranking tips and alpha 🚀
                       </p>
                       
                       {isConfirming ? (
