@@ -226,6 +226,7 @@ export async function registerRoutes(
       // Search in all seasons (s1-s4) for users with rank <= 1500
       const allSuggestions: { username: string; handle: string; rank: number; season: string }[] = [];
       
+      // First, search historical seasons s1-s4 from database
       for (const season of ["s4", "s3", "s2", "s1"]) {
         const dbResults = await db
           .select()
@@ -246,6 +247,26 @@ export async function registerRoutes(
           }));
         
         allSuggestions.push(...matches);
+      }
+      
+      // Also search S5 live data (fetch first 15 pages = top 1500 for 30d timeframe)
+      try {
+        const liveData = await fetchLiveLeaderboard("30d", 15);
+        const s5Matches = liveData
+          .filter(entry => {
+            const handle = entry.username.toLowerCase();
+            const displayName = (entry.displayName || '').toLowerCase();
+            return (handle.includes(searchTerm) || displayName.includes(searchTerm)) && entry.rank <= 1500;
+          })
+          .map(entry => ({
+            username: entry.displayName || entry.username,
+            handle: entry.username,
+            rank: entry.rank,
+            season: "s5",
+          }));
+        allSuggestions.push(...s5Matches);
+      } catch (e) {
+        console.error("Error fetching S5 suggestions:", e);
       }
       
       // Deduplicate by handle and take top 4 by best rank
