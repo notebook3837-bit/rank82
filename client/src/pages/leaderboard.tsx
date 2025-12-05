@@ -1,11 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { RankTable, RankData } from "@/components/rank-table";
 import { StatsCard } from "@/components/stats-card";
 import { TierSelector } from "@/components/tier-selector";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Flame, Trophy, Users, RefreshCw, ExternalLink, Loader2 } from "lucide-react";
+import { Search, Flame, Trophy, Users, RefreshCw, ExternalLink, Loader2, Twitter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface LeaderboardResponse {
@@ -55,7 +55,31 @@ export default function Leaderboard() {
   const [tier, setTier] = useState("s4");
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResponse | null>(null);
+  const [showFollowPrompt, setShowFollowPrompt] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [confirmCountdown, setConfirmCountdown] = useState(6);
+  const [resultsRevealed, setResultsRevealed] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (isConfirming && confirmCountdown > 0) {
+      timer = setTimeout(() => {
+        setConfirmCountdown(prev => prev - 1);
+      }, 1000);
+    } else if (isConfirming && confirmCountdown === 0) {
+      setIsConfirming(false);
+      setResultsRevealed(true);
+      setShowFollowPrompt(false);
+    }
+    return () => clearTimeout(timer);
+  }, [isConfirming, confirmCountdown]);
+
+  const handleFollowClick = () => {
+    window.open('https://x.com/intent/follow?screen_name=sinceOctober8', '_blank');
+    setIsConfirming(true);
+    setConfirmCountdown(6);
+  };
   
   const searchMutation = useMutation({
     mutationFn: async (username: string) => {
@@ -67,11 +91,10 @@ export default function Leaderboard() {
     },
     onSuccess: (data) => {
       setSearchResults(data);
-      toast({
-        title: "Search Complete",
-        description: `Found ranks for ${data.handle}`,
-        duration: 2000,
-      });
+      setShowFollowPrompt(true);
+      setResultsRevealed(false);
+      setIsConfirming(false);
+      setConfirmCountdown(6);
     },
     onError: () => {
       toast({
@@ -216,7 +239,40 @@ export default function Leaderboard() {
                 </div>
               </div>
               
-              <div className="overflow-x-auto">
+              {showFollowPrompt && !resultsRevealed && (
+                <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-2 border-black rounded-xl p-6 text-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                  <div className="text-2xl font-black text-black mb-3">
+                    🎉 Found your rank!
+                  </div>
+                  <p className="text-lg font-bold text-black/80 mb-4">
+                    Follow <a href="https://x.com/sinceOctober8" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">@sinceOctober8</a> to see your live rank
+                  </p>
+                  <p className="text-sm text-black/60 mb-6">
+                    Get ranking tips and alpha 🚀
+                  </p>
+                  
+                  {isConfirming ? (
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="flex items-center gap-2 text-black font-bold">
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        <span>Confirming if you already followed...</span>
+                      </div>
+                      <div className="text-3xl font-black text-yellow-600">{confirmCountdown}</div>
+                    </div>
+                  ) : (
+                    <Button 
+                      onClick={handleFollowClick}
+                      className="h-14 px-8 bg-black text-white hover:bg-black/80 transition-all text-lg font-bold rounded-lg shadow-[4px_4px_0px_0px_rgba(234,179,8,1)] flex items-center gap-2"
+                      data-testid="button-follow"
+                    >
+                      <Twitter className="h-5 w-5" />
+                      Follow @sinceOctober8
+                    </Button>
+                  )}
+                </div>
+              )}
+              
+              {resultsRevealed && <div className="overflow-x-auto">
                 {/* Season 5 Section - Always shown */}
                 <div className="mb-6">
                   <h4 className="font-bold text-black text-sm uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -326,6 +382,7 @@ export default function Leaderboard() {
                   </table>
                 </div>
               </div>
+              }
             </div>
           )}
           
@@ -338,6 +395,19 @@ export default function Leaderboard() {
         
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
           <div>
+            <div className="mb-4">
+              <a 
+                href="https://x.com/sinceOctober8" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 bg-black text-white px-4 py-2 rounded-full font-bold text-lg hover:bg-black/80 transition-all shadow-[3px_3px_0px_0px_rgba(234,179,8,1)]"
+                data-testid="link-creator"
+              >
+                <Twitter className="w-5 h-5" />
+                @sinceOctober8
+              </a>
+              <p className="text-sm text-black/60 mt-2 font-medium">Follow for ranking tips and alpha 🚀</p>
+            </div>
             <h1 className="text-5xl md:text-7xl font-bold tracking-tighter mb-4 text-black">
               ZAMA<br/>LIVE RANK<br/>CHECKER
             </h1>
