@@ -506,7 +506,9 @@ export default function Leaderboard() {
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-bold animate-bounce">NEW</span>
               </a>
             </div>
-            <p className="text-sm text-black/60 mt-2 font-medium">Follow for ranking tips and alpha 🚀</p>
+            <p className="inline-block bg-gradient-to-r from-yellow-300 via-orange-300 to-yellow-300 bg-[length:200%_100%] animate-[shimmer_3s_linear_infinite] text-black text-sm sm:text-base mt-3 font-bold px-4 py-2 rounded-full border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+              ⭐ Follow for ranking tips and alpha 🚀
+            </p>
             <h1 className="text-5xl md:text-7xl font-bold tracking-tighter mb-4 text-black">
               ZAMA<br/>LIVE RANK<br/>CHECKER
             </h1>
