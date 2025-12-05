@@ -5,7 +5,7 @@ import { StatsCard } from "@/components/stats-card";
 import { TierSelector } from "@/components/tier-selector";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Flame, Trophy, Users, RefreshCw, ExternalLink, Loader2, Twitter } from "lucide-react";
+import { Search, Flame, Trophy, Users, RefreshCw, ExternalLink, Loader2, Twitter, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface LeaderboardResponse {
@@ -395,7 +395,7 @@ export default function Leaderboard() {
         
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
           <div>
-            <div className="mb-4">
+            <div className="mb-4 flex flex-wrap items-center gap-3">
               <a 
                 href="https://x.com/sinceOctober8" 
                 target="_blank" 
@@ -406,8 +406,18 @@ export default function Leaderboard() {
                 <Twitter className="w-5 h-5" />
                 @sinceOctober8
               </a>
-              <p className="text-sm text-black/60 mt-2 font-medium">Follow for ranking tips and alpha 🚀</p>
+              <a 
+                href="https://t.me/alphaonly13" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-cyan-400 text-white px-4 py-2 rounded-full font-bold text-lg hover:from-blue-600 hover:to-cyan-500 transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] animate-pulse"
+                data-testid="link-telegram"
+              >
+                <Send className="w-5 h-5" />
+                Airdrop Alpha Calls
+              </a>
             </div>
+            <p className="text-sm text-black/60 mt-2 font-medium">Follow for ranking tips and alpha 🚀</p>
             <h1 className="text-5xl md:text-7xl font-bold tracking-tighter mb-4 text-black">
               ZAMA<br/>LIVE RANK<br/>CHECKER
             </h1>
