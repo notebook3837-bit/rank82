@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import fetch from "node-fetch";
 import { db } from "./db";
 import { leaderboardEntries } from "@shared/schema";
-import { eq, ilike, or } from "drizzle-orm";
+import { eq, ilike, or, lte, sql } from "drizzle-orm";
 
 interface ApiEntry {
   rank: number;
@@ -211,6 +211,61 @@ export async function registerRoutes(
   // POST /api/refresh - Manually refresh data (for testing)
   app.post("/api/refresh", async (_req, res) => {
     res.json({ success: true, message: "Data is fetched live from API" });
+  });
+
+  // GET /api/suggestions/:query - Get search suggestions (top 1500 rank users only)
+  app.get("/api/suggestions/:query", async (req, res) => {
+    try {
+      const { query } = req.params;
+      const searchTerm = query.replace('@', '').toLowerCase().trim();
+      
+      if (!searchTerm || searchTerm.length < 1) {
+        return res.json({ suggestions: [] });
+      }
+      
+      // Search in all seasons (s1-s4) for users with rank <= 1500
+      const allSuggestions: { username: string; handle: string; rank: number; season: string }[] = [];
+      
+      for (const season of ["s4", "s3", "s2", "s1"]) {
+        const dbResults = await db
+          .select()
+          .from(leaderboardEntries)
+          .where(eq(leaderboardEntries.season, season));
+        
+        const matches = dbResults
+          .filter(entry => {
+            const extractedHandle = extractTwitterHandle(entry.handle);
+            const displayName = entry.username.toLowerCase();
+            return (extractedHandle.includes(searchTerm) || displayName.includes(searchTerm)) && entry.rank <= 1500;
+          })
+          .map(entry => ({
+            username: entry.username,
+            handle: extractTwitterHandle(entry.handle),
+            rank: entry.rank,
+            season,
+          }));
+        
+        allSuggestions.push(...matches);
+      }
+      
+      // Deduplicate by handle and take top 4 by best rank
+      const uniqueByHandle = new Map<string, typeof allSuggestions[0]>();
+      for (const suggestion of allSuggestions) {
+        const existing = uniqueByHandle.get(suggestion.handle);
+        if (!existing || suggestion.rank < existing.rank) {
+          uniqueByHandle.set(suggestion.handle, suggestion);
+        }
+      }
+      
+      const suggestions = Array.from(uniqueByHandle.values())
+        .sort((a, b) => a.rank - b.rank)
+        .slice(0, 4);
+      
+      res.json({ suggestions });
+    } catch (error) {
+      console.error("Error fetching suggestions:", error);
+      res.json({ suggestions: [] });
+    }
   });
 
   // GET /api/search/:username - Search for a user across all seasons

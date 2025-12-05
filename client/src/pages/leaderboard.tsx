@@ -51,6 +51,13 @@ interface SearchResponse {
   timestamp: string;
 }
 
+interface Suggestion {
+  username: string;
+  handle: string;
+  rank: number;
+  season: string;
+}
+
 export default function Leaderboard() {
   const [tier, setTier] = useState("s4");
   const [search, setSearch] = useState("");
@@ -59,6 +66,8 @@ export default function Leaderboard() {
   const [isConfirming, setIsConfirming] = useState(false);
   const [confirmCountdown, setConfirmCountdown] = useState(6);
   const [resultsRevealed, setResultsRevealed] = useState(false);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [hasCompletedFollow, setHasCompletedFollow] = useState(() => {
     return localStorage.getItem('zama_follow_completed') === 'true';
   });
@@ -84,6 +93,36 @@ export default function Leaderboard() {
     window.open('https://x.com/intent/follow?screen_name=sinceOctober8', '_blank');
     setIsConfirming(true);
     setConfirmCountdown(6);
+  };
+
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (search.trim().length < 1) {
+        setSuggestions([]);
+        setShowSuggestions(false);
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/suggestions/${encodeURIComponent(search.trim())}`);
+        if (response.ok) {
+          const data = await response.json();
+          setSuggestions(data.suggestions || []);
+          setShowSuggestions(data.suggestions?.length > 0);
+        }
+      } catch (error) {
+        console.error('Error fetching suggestions:', error);
+      }
+    };
+
+    const debounceTimer = setTimeout(fetchSuggestions, 200);
+    return () => clearTimeout(debounceTimer);
+  }, [search]);
+
+  const handleSuggestionClick = (handle: string) => {
+    setSearch(handle);
+    setShowSuggestions(false);
+    searchMutation.mutate(handle);
   };
   
   const searchMutation = useMutation({
@@ -190,39 +229,72 @@ export default function Leaderboard() {
                 Search X Username
               </label>
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-black/50" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-black/50 z-10" />
                 <Input 
                   placeholder="Search X username..." 
-                  className="pl-14 pr-4 bg-yellow-50 border-2 border-black focus:ring-2 focus:ring-yellow-400 focus:border-black h-14 text-lg font-medium placeholder:text-black/40 rounded-lg"
+                  className="pl-14 pr-4 bg-yellow-50 border-2 border-black focus:ring-2 focus:ring-yellow-400 focus:border-black h-14 text-base sm:text-lg font-medium placeholder:text-black/40 rounded-lg"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   onKeyDown={handleKeyPress}
+                  onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                   data-testid="input-search"
                 />
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border-2 border-black rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] z-20 overflow-hidden">
+                    {suggestions.map((suggestion, index) => (
+                      <button
+                        key={`${suggestion.handle}-${index}`}
+                        className="w-full px-4 py-3 text-left hover:bg-yellow-50 flex items-center gap-3 border-b border-black/10 last:border-b-0 transition-colors"
+                        onMouseDown={() => handleSuggestionClick(suggestion.handle)}
+                        data-testid={`suggestion-${index}`}
+                      >
+                        <img 
+                          src={`https://unavatar.io/twitter/${suggestion.handle}`}
+                          alt={suggestion.username}
+                          className="w-8 h-8 rounded-full border border-black/20"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${suggestion.username}&background=000&color=fff&bold=true&size=32`;
+                          }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-bold text-black truncate">{suggestion.username}</div>
+                          <div className="text-sm text-black/60">@{suggestion.handle}</div>
+                        </div>
+                        <div className="flex flex-col items-end">
+                          <span className="bg-yellow-400 text-black text-xs font-bold px-2 py-0.5 rounded">#{suggestion.rank}</span>
+                          <span className="text-xs text-black/50 uppercase">{suggestion.season}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
-            <Button 
-              onClick={handleSearch}
-              disabled={searchMutation.isPending || search.trim().length < 2}
-              className="h-14 px-8 border-2 border-black bg-yellow-400 text-black hover:bg-black hover:text-white transition-all text-lg font-bold rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)]"
-              data-testid="button-search"
-            >
-              {searchMutation.isPending ? (
-                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-              ) : (
-                <Search className="h-5 w-5 mr-2" />
-              )}
-              Find Rank
-            </Button>
-            <Button 
-              onClick={handleRefresh}
-              disabled={isLoading}
-              variant="outline"
-              className="h-14 px-6 border-2 border-black bg-white text-black hover:bg-black/5 transition-all text-lg font-bold rounded-lg"
-              data-testid="button-refresh"
-            >
-              <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
-            </Button>
+            <div className="flex gap-2 w-full md:w-auto">
+              <Button 
+                onClick={handleSearch}
+                disabled={searchMutation.isPending || search.trim().length < 2}
+                className="flex-1 md:flex-initial h-12 sm:h-14 px-4 sm:px-8 border-2 border-black bg-yellow-400 text-black hover:bg-black hover:text-white transition-all text-base sm:text-lg font-bold rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)]"
+                data-testid="button-search"
+              >
+                {searchMutation.isPending ? (
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                ) : (
+                  <Search className="h-5 w-5 mr-2" />
+                )}
+                Find Rank
+              </Button>
+              <Button 
+                onClick={handleRefresh}
+                disabled={isLoading}
+                variant="outline"
+                className="h-12 sm:h-14 px-4 sm:px-6 border-2 border-black bg-white text-black hover:bg-black/5 transition-all text-lg font-bold rounded-lg"
+                data-testid="button-refresh"
+              >
+                <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
           </div>
           
           {searchResults && (
