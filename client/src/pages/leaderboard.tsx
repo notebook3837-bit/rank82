@@ -59,6 +59,9 @@ export default function Leaderboard() {
   const [isConfirming, setIsConfirming] = useState(false);
   const [confirmCountdown, setConfirmCountdown] = useState(6);
   const [resultsRevealed, setResultsRevealed] = useState(false);
+  const [hasCompletedFollow, setHasCompletedFollow] = useState(() => {
+    return localStorage.getItem('zama_follow_completed') === 'true';
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -71,6 +74,8 @@ export default function Leaderboard() {
       setIsConfirming(false);
       setResultsRevealed(true);
       setShowFollowPrompt(false);
+      localStorage.setItem('zama_follow_completed', 'true');
+      setHasCompletedFollow(true);
     }
     return () => clearTimeout(timer);
   }, [isConfirming, confirmCountdown]);
@@ -91,10 +96,15 @@ export default function Leaderboard() {
     },
     onSuccess: (data) => {
       setSearchResults(data);
-      setShowFollowPrompt(true);
-      setResultsRevealed(false);
-      setIsConfirming(false);
-      setConfirmCountdown(6);
+      if (hasCompletedFollow) {
+        setShowFollowPrompt(false);
+        setResultsRevealed(true);
+      } else {
+        setShowFollowPrompt(true);
+        setResultsRevealed(false);
+        setIsConfirming(false);
+        setConfirmCountdown(6);
+      }
     },
     onError: () => {
       toast({
@@ -242,15 +252,27 @@ export default function Leaderboard() {
               <div className="relative">
                 {showFollowPrompt && !resultsRevealed && (
                   <div className="absolute inset-0 z-10 flex items-start justify-center pt-8 bg-white/60 backdrop-blur-sm rounded-xl">
-                    <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-2 border-black rounded-xl p-6 text-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] mx-4">
+                    <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-2 border-black rounded-xl p-6 text-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] mx-4 max-w-md">
                       <div className="text-2xl font-black text-black mb-3">
                         🎉 Found your rank!
                       </div>
                       <p className="text-lg font-bold text-black/80 mb-4">
                         Follow <a href="https://x.com/sinceOctober8" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">@sinceOctober8</a> to see your live rank
                       </p>
+                      
+                      <a 
+                        href="https://t.me/alphaonly13" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-cyan-400 text-white px-4 py-2 rounded-full font-bold text-base hover:from-blue-600 hover:to-cyan-500 transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] animate-pulse mb-4"
+                        data-testid="link-telegram-prompt"
+                      >
+                        <Send className="w-5 h-5" />
+                        Join Telegram for Airdrop Alpha Calls
+                      </a>
+                      
                       <p className="text-sm text-black/60 mb-6">
-                        Get ranking tips and alpha 🚀
+                        Get ranking tips and exclusive alpha 🚀
                       </p>
                       
                       {isConfirming ? (
