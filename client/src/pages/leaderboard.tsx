@@ -408,12 +408,12 @@ export default function Leaderboard() {
         
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
           <div>
-            <div className="mb-4 flex flex-wrap items-center gap-3">
+            <div className="mb-4 flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-3">
               <a 
                 href="https://x.com/sinceOctober8" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-black text-white px-4 py-2 rounded-full font-bold text-lg hover:bg-black/80 transition-all shadow-[3px_3px_0px_0px_rgba(234,179,8,1)]"
+                className="inline-flex items-center gap-2 bg-black text-white px-4 py-2 rounded-full font-bold text-base sm:text-lg hover:bg-black/80 transition-all shadow-[3px_3px_0px_0px_rgba(234,179,8,1)]"
                 data-testid="link-creator"
               >
                 <Twitter className="w-5 h-5" />
@@ -423,11 +423,15 @@ export default function Leaderboard() {
                 href="https://t.me/alphaonly13" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-cyan-400 text-white px-4 py-2 rounded-full font-bold text-lg hover:from-blue-600 hover:to-cyan-500 transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] animate-pulse"
+                className="relative inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 via-cyan-400 to-blue-500 bg-[length:200%_100%] animate-[shimmer_2s_linear_infinite] text-white px-5 py-3 rounded-full font-bold text-base sm:text-lg hover:scale-105 transition-transform shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] border-2 border-white/30"
                 data-testid="link-telegram"
               >
-                <Send className="w-5 h-5" />
-                Airdrop Alpha Calls
+                <Send className="w-6 h-6" />
+                <span className="flex flex-col leading-tight">
+                  <span className="text-xs opacity-80">JOIN FOR</span>
+                  <span>Airdrop Alpha Calls</span>
+                </span>
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-bold animate-bounce">NEW</span>
               </a>
             </div>
             <p className="text-sm text-black/60 mt-2 font-medium">Follow for ranking tips and alpha 🚀</p>
