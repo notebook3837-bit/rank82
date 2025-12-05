@@ -485,11 +485,15 @@ export default function Leaderboard() {
                 href="https://x.com/sinceOctober8" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-black text-white px-4 py-2 rounded-full font-bold text-base sm:text-lg hover:bg-black/80 transition-all shadow-[3px_3px_0px_0px_rgba(234,179,8,1)]"
+                className="relative inline-flex items-center gap-2 bg-gradient-to-r from-gray-900 via-gray-700 to-gray-900 bg-[length:200%_100%] animate-[shimmer_2s_linear_infinite] text-white px-5 py-3 rounded-full font-bold text-base sm:text-lg hover:scale-105 transition-transform shadow-[4px_4px_0px_0px_rgba(234,179,8,1)] border-2 border-white/20"
                 data-testid="link-creator"
               >
-                <Twitter className="w-5 h-5" />
-                @sinceOctober8
+                <Twitter className="w-6 h-6" />
+                <span className="flex flex-col leading-tight">
+                  <span className="text-xs opacity-80">FOLLOW</span>
+                  <span>@sinceOctober8</span>
+                </span>
+                <span className="absolute -top-1 -right-1 bg-yellow-400 text-black text-xs px-2 py-0.5 rounded-full font-bold animate-bounce">X</span>
               </a>
               <a 
                 href="https://t.me/alphaonly13" 
