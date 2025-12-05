@@ -1,9 +1,27 @@
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useState, useMemo } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { RankTable, RankData } from "@/components/rank-table";
+import { StatsCard } from "@/components/stats-card";
+import { TierSelector } from "@/components/tier-selector";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Loader2, Trophy, ExternalLink, User } from "lucide-react";
+import { Search, Flame, Trophy, Users, RefreshCw, ExternalLink, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+interface LeaderboardResponse {
+  season: string;
+  count: number;
+  lastUpdated: string | null;
+  message?: string;
+  data: {
+    id: number;
+    season: string;
+    rank: number;
+    username: string;
+    handle: string;
+    avatarUrl?: string;
+  }[];
+}
 
 interface UserRankResult {
   season: string;
@@ -34,6 +52,7 @@ interface SearchResponse {
 }
 
 export default function Leaderboard() {
+  const [tier, setTier] = useState("s4");
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResponse | null>(null);
   const { toast } = useToast();
@@ -48,11 +67,16 @@ export default function Leaderboard() {
     },
     onSuccess: (data) => {
       setSearchResults(data);
+      toast({
+        title: "Search Complete",
+        description: `Found ranks for ${data.handle}`,
+        duration: 2000,
+      });
     },
     onError: () => {
       toast({
-        title: "User Not Found",
-        description: "Could not find this user. Please check the username.",
+        title: "Search Failed",
+        description: "Could not find user data. Please try again.",
         variant: "destructive",
         duration: 3000,
       });
@@ -71,166 +95,317 @@ export default function Leaderboard() {
     }
   };
 
-  const getRankBadge = (rank: number | null) => {
-    if (!rank) return null;
-    if (rank === 1) return "bg-yellow-400 text-black";
-    if (rank === 2) return "bg-gray-300 text-black";
-    if (rank === 3) return "bg-amber-600 text-white";
-    if (rank <= 10) return "bg-blue-500 text-white";
-    if (rank <= 100) return "bg-green-500 text-white";
-    return "bg-gray-500 text-white";
+  const { data: apiData, isLoading, error, refetch } = useQuery<LeaderboardResponse>({
+    queryKey: ['leaderboard', tier],
+    queryFn: async () => {
+      const response = await fetch(`/api/leaderboard/${tier}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch leaderboard data');
+      }
+      return response.json();
+    },
+  });
+
+  const handleRefresh = async () => {
+    await refetch();
+    toast({
+      title: "Data Updated",
+      description: "Leaderboard data has been refreshed.",
+      duration: 2000,
+    });
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 text-white">
-      <div className="container mx-auto px-4 py-8 max-w-2xl">
-        
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 bg-yellow-400/10 border border-yellow-400/30 rounded-full px-4 py-1.5 mb-4">
-            <Trophy className="w-4 h-4 text-yellow-400" />
-            <span className="text-yellow-400 text-sm font-medium">Zama Creator Program</span>
-          </div>
-          <h1 className="text-4xl md:text-5xl font-bold mb-3 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-            Rank Checker
-          </h1>
-          <p className="text-gray-400 text-lg">
-            Search your rankings across all seasons (S1 - S5)
-          </p>
-        </div>
+  const filteredData = useMemo(() => {
+    if (!apiData?.data) return [];
+    
+    let filtered = apiData.data.map(entry => ({
+      rank: entry.rank,
+      username: entry.username,
+      handle: entry.handle,
+      avatarUrl: entry.avatarUrl,
+    }));
+    
+    if (search) {
+      filtered = filtered.filter(
+        d => 
+          d.username.toLowerCase().includes(search.toLowerCase()) || 
+          d.handle.toLowerCase().includes(search.toLowerCase())
+      );
+    }
 
-        <div className="bg-gray-800/50 backdrop-blur border border-gray-700 rounded-2xl p-6 mb-6">
-          <div className="flex gap-3">
-            <div className="relative flex-1">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500" />
-              <Input 
-                placeholder="Enter X username (e.g. Zun2025)" 
-                className="pl-12 h-14 bg-gray-900/50 border-gray-600 focus:border-yellow-400 focus:ring-yellow-400/20 text-lg rounded-xl placeholder:text-gray-500"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={handleKeyPress}
-                data-testid="input-search"
-              />
+    return filtered;
+  }, [apiData, search]);
+
+  const seasonInfo: Record<string, { creators: number; prize: string }> = {
+    s1: { creators: 223, prize: "$50,000" },
+    s2: { creators: 436, prize: "$50,000" },
+    s3: { creators: 726, prize: "$50,000" },
+    s4: { creators: 571, prize: "$50,000" },
+  };
+
+  const currentSeasonInfo = seasonInfo[tier] || { creators: 0, prize: "$50,000" };
+
+  return (
+    <div className="min-h-screen bg-background text-foreground font-sans relative overflow-hidden selection:bg-black selection:text-white">
+      
+      <div className="relative z-10 container mx-auto px-4 py-8 md:py-12 max-w-6xl">
+        
+        <div className="mb-8 bg-white border-2 border-black rounded-xl p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+          <div className="flex flex-col md:flex-row items-center gap-4">
+            <div className="flex-1 w-full">
+              <label className="block text-sm font-bold uppercase tracking-wider text-black/70 mb-2">
+                Search X Username
+              </label>
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-black/50" />
+                <Input 
+                  placeholder="Search X username..." 
+                  className="pl-14 pr-4 bg-yellow-50 border-2 border-black focus:ring-2 focus:ring-yellow-400 focus:border-black h-14 text-lg font-medium placeholder:text-black/40 rounded-lg"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onKeyDown={handleKeyPress}
+                  data-testid="input-search"
+                />
+              </div>
             </div>
             <Button 
               onClick={handleSearch}
               disabled={searchMutation.isPending || search.trim().length < 2}
-              className="h-14 px-6 bg-yellow-400 hover:bg-yellow-500 text-black font-bold rounded-xl transition-all"
+              className="h-14 px-8 border-2 border-black bg-yellow-400 text-black hover:bg-black hover:text-white transition-all text-lg font-bold rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)]"
               data-testid="button-search"
             >
               {searchMutation.isPending ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
               ) : (
-                <Search className="h-5 w-5" />
+                <Search className="h-5 w-5 mr-2" />
               )}
+              Find Rank
+            </Button>
+            <Button 
+              onClick={handleRefresh}
+              disabled={isLoading}
+              variant="outline"
+              className="h-14 px-6 border-2 border-black bg-white text-black hover:bg-black/5 transition-all text-lg font-bold rounded-lg"
+              data-testid="button-refresh"
+            >
+              <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
             </Button>
           </div>
-        </div>
-
-        {searchResults && (
-          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
-            
-            <div className="bg-gray-800/50 backdrop-blur border border-gray-700 rounded-2xl p-5">
-              <div className="flex items-center gap-4">
+          
+          {searchResults && (
+            <div className="mt-6 pt-6 border-t-2 border-black/10">
+              <div className="flex items-center gap-3 mb-4">
                 <img 
                   src={searchResults.profilePic}
                   alt={searchResults.displayName}
-                  className="w-16 h-16 rounded-full border-2 border-yellow-400 object-cover"
+                  className="w-12 h-12 rounded-full border-2 border-black object-cover"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${searchResults.displayName}&background=1f2937&color=fbbf24&bold=true&size=128`;
+                    (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${searchResults.displayName}&background=000&color=fff&bold=true`;
                   }}
                 />
-                <div className="flex-1">
-                  <h2 className="font-bold text-xl text-white">{searchResults.displayName}</h2>
+                <div>
+                  <h3 className="font-bold text-lg text-black">{searchResults.displayName}</h3>
                   <a 
                     href={`https://x.com/${searchResults.searchedUsername}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-yellow-400 hover:text-yellow-300 font-medium flex items-center gap-1"
+                    className="text-sm text-blue-600 hover:underline font-medium"
                   >
                     {searchResults.handle}
-                    <ExternalLink className="w-3 h-3" />
                   </a>
                 </div>
               </div>
+              
+              <div className="overflow-x-auto">
+                {/* Season 5 Section - Always shown */}
+                <div className="mb-6">
+                  <h4 className="font-bold text-black text-sm uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <span className="bg-yellow-400 text-black px-2 py-0.5 rounded text-xs">S5</span>
+                    Season 5 (Active)
+                  </h4>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b-2 border-black">
+                        <th className="text-left py-2 px-3 font-bold text-black/70 uppercase tracking-wider text-xs">Timeframe</th>
+                        <th className="text-center py-2 px-3 font-bold text-black/70 uppercase tracking-wider text-xs">Rank</th>
+                        <th className="text-right py-2 px-3 font-bold text-black/70 uppercase tracking-wider text-xs">Mindshare</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-black/10 hover:bg-yellow-50">
+                        <td className="py-3 px-3">
+                          <span className="font-bold text-black">24 Hours</span>
+                        </td>
+                        <td className="text-center py-3 px-3">
+                          {searchResults.s5.rank24h ? (
+                            <span className="font-bold text-black text-base">#{searchResults.s5.rank24h}</span>
+                          ) : (
+                            <span className="text-black/30">Not ranked</span>
+                          )}
+                        </td>
+                        <td className="text-right py-3 px-3">
+                          {searchResults.s5.mindshare24h ? (
+                            <span className="font-mono text-black/80">{searchResults.s5.mindshare24h.toFixed(4)}%</span>
+                          ) : (
+                            <span className="text-black/30">-</span>
+                          )}
+                        </td>
+                      </tr>
+                      <tr className="border-b border-black/10 hover:bg-yellow-50">
+                        <td className="py-3 px-3">
+                          <span className="font-bold text-black">7 Days</span>
+                        </td>
+                        <td className="text-center py-3 px-3">
+                          {searchResults.s5.rank7d ? (
+                            <span className="font-bold text-black text-base">#{searchResults.s5.rank7d}</span>
+                          ) : (
+                            <span className="text-black/30">Not ranked</span>
+                          )}
+                        </td>
+                        <td className="text-right py-3 px-3">
+                          {searchResults.s5.mindshare7d ? (
+                            <span className="font-mono text-black/80">{searchResults.s5.mindshare7d.toFixed(4)}%</span>
+                          ) : (
+                            <span className="text-black/30">-</span>
+                          )}
+                        </td>
+                      </tr>
+                      <tr className="border-b border-black/10 hover:bg-yellow-50">
+                        <td className="py-3 px-3">
+                          <span className="font-bold text-black">30 Days</span>
+                        </td>
+                        <td className="text-center py-3 px-3">
+                          {searchResults.s5.rank30d ? (
+                            <span className="font-bold text-black text-base">#{searchResults.s5.rank30d}</span>
+                          ) : (
+                            <span className="text-black/30">Not ranked</span>
+                          )}
+                        </td>
+                        <td className="text-right py-3 px-3">
+                          {searchResults.s5.mindshare30d ? (
+                            <span className="font-mono text-black/80">{searchResults.s5.mindshare30d.toFixed(4)}%</span>
+                          ) : (
+                            <span className="text-black/30">-</span>
+                          )}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                
+                {/* Historical Seasons Section (S1-S4) */}
+                <div>
+                  <h4 className="font-bold text-black text-sm uppercase tracking-wider mb-3">Historical Seasons (Rank Only)</h4>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b-2 border-black">
+                        <th className="text-left py-2 px-3 font-bold text-black/70 uppercase tracking-wider text-xs">Season</th>
+                        <th className="text-center py-2 px-3 font-bold text-black/70 uppercase tracking-wider text-xs">Rank</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {["s4", "s3", "s2", "s1"].map((season) => {
+                        const result = searchResults.results.find(r => r.season === season);
+                        
+                        return (
+                          <tr key={season} className="border-b border-black/10 hover:bg-yellow-50">
+                            <td className="py-3 px-3">
+                              <span className="font-bold text-black uppercase">{season}</span>
+                            </td>
+                            <td className="text-center py-3 px-3">
+                              {result?.found ? (
+                                <span className="font-bold text-black text-base">#{result.rank}</span>
+                              ) : (
+                                <span className="text-black/30">Not ranked</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
-
-            <div className="bg-gray-800/50 backdrop-blur border border-gray-700 rounded-2xl overflow-hidden">
-              <div className="bg-yellow-400/10 border-b border-gray-700 px-5 py-3">
-                <h3 className="font-bold text-yellow-400 flex items-center gap-2">
-                  <span className="bg-yellow-400 text-black text-xs px-2 py-0.5 rounded font-bold">LIVE</span>
-                  Season 5 Rankings
-                </h3>
-              </div>
-              <div className="divide-y divide-gray-700/50">
-                {[
-                  { label: "24 Hours", rank: searchResults.s5.rank24h, mindshare: searchResults.s5.mindshare24h },
-                  { label: "7 Days", rank: searchResults.s5.rank7d, mindshare: searchResults.s5.mindshare7d },
-                  { label: "30 Days", rank: searchResults.s5.rank30d, mindshare: searchResults.s5.mindshare30d },
-                ].map((item) => (
-                  <div key={item.label} className="flex items-center justify-between px-5 py-4">
-                    <span className="text-gray-400 font-medium">{item.label}</span>
-                    <div className="flex items-center gap-4">
-                      {item.mindshare && (
-                        <span className="text-gray-500 text-sm font-mono">
-                          {item.mindshare.toFixed(4)}%
-                        </span>
-                      )}
-                      {item.rank ? (
-                        <span className={`px-3 py-1 rounded-lg font-bold text-sm ${getRankBadge(item.rank)}`}>
-                          #{item.rank}
-                        </span>
-                      ) : (
-                        <span className="text-gray-600 text-sm">Not ranked</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
+          )}
+          
+          {search && !searchResults && !searchMutation.isPending && (
+            <div className="mt-3 text-sm font-medium text-black/70">
+              Showing results for "<span className="text-black font-bold">{search}</span>" - {filteredData.length} user{filteredData.length !== 1 ? 's' : ''} found in leaderboard
+            </div>
+          )}
+        </div>
+        
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="bg-black text-white px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-sm">
+                Historical Data
               </div>
             </div>
-
-            <div className="bg-gray-800/50 backdrop-blur border border-gray-700 rounded-2xl overflow-hidden">
-              <div className="bg-gray-700/30 border-b border-gray-700 px-5 py-3">
-                <h3 className="font-bold text-gray-300">Historical Rankings</h3>
-              </div>
-              <div className="divide-y divide-gray-700/50">
-                {["s4", "s3", "s2", "s1"].map((season) => {
-                  const result = searchResults.results.find(r => r.season === season);
-                  return (
-                    <div key={season} className="flex items-center justify-between px-5 py-4">
-                      <span className="text-gray-400 font-medium uppercase">{season}</span>
-                      {result?.found ? (
-                        <span className={`px-3 py-1 rounded-lg font-bold text-sm ${getRankBadge(result.rank)}`}>
-                          #{result.rank}
-                        </span>
-                      ) : (
-                        <span className="text-gray-600 text-sm">Not ranked</span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            <h1 className="text-5xl md:text-7xl font-bold tracking-tighter mb-4 text-black">
+              ZAMA<br/>CREATOR<br/>PROGRAM
+            </h1>
+            <p className="text-black/80 text-xl max-w-2xl font-medium">
+              Historical leaderboard rankings from Seasons 1-4.
+            </p>
           </div>
-        )}
-
-        {!searchResults && !searchMutation.isPending && (
-          <div className="text-center py-12 text-gray-500">
-            <Search className="w-12 h-12 mx-auto mb-4 opacity-30" />
-            <p className="text-lg">Enter a username to check rankings</p>
-            <p className="text-sm mt-2">Search works across S1, S2, S3, S4 & live S5 data</p>
+          
+          <div className="flex flex-col items-end gap-2">
+             <a 
+               href="https://www.zama.org/programs/creator-program" 
+               target="_blank" 
+               rel="noopener noreferrer"
+               className="flex items-center gap-2 text-sm font-bold text-black hover:underline"
+             >
+               View on Zama <ExternalLink className="w-4 h-4" />
+             </a>
           </div>
-        )}
+        </div>
 
-        <div className="mt-12 text-center">
-          <a 
-            href="https://www.zama.org/programs/creator-program" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-yellow-400 transition-colors"
-          >
-            Learn more about Zama Creator Program
-            <ExternalLink className="w-4 h-4" />
-          </a>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
+          <StatsCard 
+            icon={Flame} 
+            label="Season" 
+            value={tier.toUpperCase()} 
+            className="bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+          />
+          <StatsCard 
+            icon={Trophy} 
+            label="Prize Pool" 
+            value={currentSeasonInfo.prize} 
+            subValue="USD"
+             className="bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+          />
+          <StatsCard 
+            icon={Users} 
+            label="Creators" 
+            value={apiData?.count.toString() || currentSeasonInfo.creators.toString()} 
+            subValue="RANKED"
+             className="bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+          />
+        </div>
+
+        <div className="flex flex-col gap-6 mb-6">
+          <TierSelector currentTier={tier} onSelect={setTier} />
+        </div>
+
+        {isLoading && filteredData.length === 0 ? (
+          <div className="text-center py-12 bg-white border-2 border-black rounded-xl">
+            <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4" />
+            <p className="text-black/60 font-bold">Loading leaderboard data...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-12 bg-white border-2 border-black rounded-xl">
+            <p className="text-red-600 font-bold mb-2">Error loading data</p>
+            <p className="text-black/60 text-sm">Please try again later</p>
+          </div>
+        ) : (
+          <RankTable data={filteredData} />
+        )}
+        
+        <div className="mt-8 text-center text-sm text-black/60 font-medium">
+          <p>Showing {filteredData.length} creators{search && ` matching "${search}"`} from {tier.toUpperCase()}.</p>
         </div>
       </div>
     </div>
