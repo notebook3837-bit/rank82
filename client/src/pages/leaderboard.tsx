@@ -239,40 +239,43 @@ export default function Leaderboard() {
                 </div>
               </div>
               
-              {showFollowPrompt && !resultsRevealed && (
-                <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-2 border-black rounded-xl p-6 text-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                  <div className="text-2xl font-black text-black mb-3">
-                    🎉 Found your rank!
-                  </div>
-                  <p className="text-lg font-bold text-black/80 mb-4">
-                    Follow <a href="https://x.com/sinceOctober8" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">@sinceOctober8</a> to see your live rank
-                  </p>
-                  <p className="text-sm text-black/60 mb-6">
-                    Get ranking tips and alpha 🚀
-                  </p>
-                  
-                  {isConfirming ? (
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="flex items-center gap-2 text-black font-bold">
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                        <span>Confirming if you already followed...</span>
+              <div className="relative">
+                {showFollowPrompt && !resultsRevealed && (
+                  <div className="absolute inset-0 z-10 flex items-start justify-center pt-8 bg-white/60 backdrop-blur-sm rounded-xl">
+                    <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-2 border-black rounded-xl p-6 text-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] mx-4">
+                      <div className="text-2xl font-black text-black mb-3">
+                        🎉 Found your rank!
                       </div>
-                      <div className="text-3xl font-black text-yellow-600">{confirmCountdown}</div>
+                      <p className="text-lg font-bold text-black/80 mb-4">
+                        Follow <a href="https://x.com/sinceOctober8" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">@sinceOctober8</a> to see your live rank
+                      </p>
+                      <p className="text-sm text-black/60 mb-6">
+                        Get ranking tips and alpha 🚀
+                      </p>
+                      
+                      {isConfirming ? (
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="flex items-center gap-2 text-black font-bold">
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                            <span>Confirming if you already followed...</span>
+                          </div>
+                          <div className="text-3xl font-black text-yellow-600">{confirmCountdown}</div>
+                        </div>
+                      ) : (
+                        <Button 
+                          onClick={handleFollowClick}
+                          className="h-14 px-8 bg-black text-white hover:bg-black/80 transition-all text-lg font-bold rounded-lg shadow-[4px_4px_0px_0px_rgba(234,179,8,1)] flex items-center gap-2"
+                          data-testid="button-follow"
+                        >
+                          <Twitter className="h-5 w-5" />
+                          Follow to See Rank
+                        </Button>
+                      )}
                     </div>
-                  ) : (
-                    <Button 
-                      onClick={handleFollowClick}
-                      className="h-14 px-8 bg-black text-white hover:bg-black/80 transition-all text-lg font-bold rounded-lg shadow-[4px_4px_0px_0px_rgba(234,179,8,1)] flex items-center gap-2"
-                      data-testid="button-follow"
-                    >
-                      <Twitter className="h-5 w-5" />
-                      Follow @sinceOctober8
-                    </Button>
-                  )}
-                </div>
-              )}
+                  </div>
+                )}
               
-              {resultsRevealed && <div className="overflow-x-auto">
+              <div className={`overflow-x-auto ${showFollowPrompt && !resultsRevealed ? 'blur-md pointer-events-none select-none' : ''}`}>
                 {/* Season 5 Section - Always shown */}
                 <div className="mb-6">
                   <h4 className="font-bold text-black text-sm uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -382,7 +385,7 @@ export default function Leaderboard() {
                   </table>
                 </div>
               </div>
-              }
+              </div>
             </div>
           )}
           
