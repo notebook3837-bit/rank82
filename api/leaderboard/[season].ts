@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { db } from '../_lib/db';
-import { leaderboardEntries } from '../../shared/schema';
+import { leaderboardEntries } from '../_lib/schema';
 import { eq } from 'drizzle-orm';
 import { fetchLiveLeaderboard } from '../_lib/utils';
 
