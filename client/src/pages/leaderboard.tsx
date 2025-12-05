@@ -238,14 +238,14 @@ export default function Leaderboard() {
                         </td>
                         <td className="text-center py-3 px-3">
                           {searchResults.s5.rank24h ? (
-                            <span className="font-bold text-black text-base">#{searchResults.s5.rank24h}</span>
+                            <span className="inline-block bg-yellow-400 text-black font-black text-lg px-3 py-1 rounded-lg border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">#{searchResults.s5.rank24h}</span>
                           ) : (
                             <span className="text-black/30">Not ranked</span>
                           )}
                         </td>
                         <td className="text-right py-3 px-3">
                           {searchResults.s5.mindshare24h ? (
-                            <span className="font-mono text-black/80">{searchResults.s5.mindshare24h.toFixed(4)}%</span>
+                            <span className="inline-block bg-black text-yellow-400 font-bold text-base px-3 py-1 rounded-lg">{searchResults.s5.mindshare24h.toFixed(4)}%</span>
                           ) : (
                             <span className="text-black/30">-</span>
                           )}
@@ -257,14 +257,14 @@ export default function Leaderboard() {
                         </td>
                         <td className="text-center py-3 px-3">
                           {searchResults.s5.rank7d ? (
-                            <span className="font-bold text-black text-base">#{searchResults.s5.rank7d}</span>
+                            <span className="inline-block bg-yellow-400 text-black font-black text-lg px-3 py-1 rounded-lg border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">#{searchResults.s5.rank7d}</span>
                           ) : (
                             <span className="text-black/30">Not ranked</span>
                           )}
                         </td>
                         <td className="text-right py-3 px-3">
                           {searchResults.s5.mindshare7d ? (
-                            <span className="font-mono text-black/80">{searchResults.s5.mindshare7d.toFixed(4)}%</span>
+                            <span className="inline-block bg-black text-yellow-400 font-bold text-base px-3 py-1 rounded-lg">{searchResults.s5.mindshare7d.toFixed(4)}%</span>
                           ) : (
                             <span className="text-black/30">-</span>
                           )}
@@ -276,14 +276,14 @@ export default function Leaderboard() {
                         </td>
                         <td className="text-center py-3 px-3">
                           {searchResults.s5.rank30d ? (
-                            <span className="font-bold text-black text-base">#{searchResults.s5.rank30d}</span>
+                            <span className="inline-block bg-yellow-400 text-black font-black text-lg px-3 py-1 rounded-lg border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">#{searchResults.s5.rank30d}</span>
                           ) : (
                             <span className="text-black/30">Not ranked</span>
                           )}
                         </td>
                         <td className="text-right py-3 px-3">
                           {searchResults.s5.mindshare30d ? (
-                            <span className="font-mono text-black/80">{searchResults.s5.mindshare30d.toFixed(4)}%</span>
+                            <span className="inline-block bg-black text-yellow-400 font-bold text-base px-3 py-1 rounded-lg">{searchResults.s5.mindshare30d.toFixed(4)}%</span>
                           ) : (
                             <span className="text-black/30">-</span>
                           )}
@@ -314,7 +314,7 @@ export default function Leaderboard() {
                             </td>
                             <td className="text-center py-3 px-3">
                               {result?.found ? (
-                                <span className="font-bold text-black text-base">#{result.rank}</span>
+                                <span className="inline-block bg-yellow-400 text-black font-black text-lg px-3 py-1 rounded-lg border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">#{result.rank}</span>
                               ) : (
                                 <span className="text-black/30">Not ranked</span>
                               )}
